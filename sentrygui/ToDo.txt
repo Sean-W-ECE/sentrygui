@@ -1,0 +1,1 @@
+Add slot/signal to set the TiltAngle and PanAngle (currently set to default).
