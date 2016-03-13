@@ -6,6 +6,7 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc/detail/distortion_model.hpp"
+#include "SerialClass.h"
 #include <opencv/cv.hpp>
 #include <iostream>
 #include <stdlib.h>
@@ -18,10 +19,18 @@
 using namespace cv;
 using namespace std;
 
+#define SCANINCREMENT 30;
+
 char key;
 int thresh = 127;
 int max_thresh = 255;
 RNG rng(12345);
+
+char outdata[64];
+string servocomm = "";
+
+bool target_found = false;
+bool target_centered = false;
 
 int cornersH = 6;
 int cornersV = 9;
@@ -29,8 +38,9 @@ int numSquares = cornersH*cornersV;
 
 double thetapPxH, thetapPxW;
 
+// These will have to change depending on what the previous angle was set to.
 double PanAngle = 90.0;
-double TiltAngle = 45.0;
+double TiltAngle = 90.0;
 
 unsigned int PanWord = 0;
 unsigned int TiltWord = 0;
@@ -41,9 +51,13 @@ double OldPanDelta = 0;
 double OldTiltDelta = 0;
 
 Point view_center;
+Point target_confirmed_points;
 
 double pan_increment = (double)180.0 / 1024.0;
-double tilt_increment = (double)90.0 / 1024.0;
+double tilt_increment = (double)180.0 / 1024.0;
+
+time_t start_time;
+time_t end_time;
 
 // For current target size, 5.5 inches in diameter,
 // 79 inches is the maximum detectable range.
@@ -278,15 +292,26 @@ static bool runAndSave(const string& outputFilename,
 
 int main()
 {
+	
 	// Creates window to display camera view
 	namedWindow("camera_feed", WINDOW_AUTOSIZE);
 	namedWindow("thresholded_view", WINDOW_AUTOSIZE);
 	namedWindow("HLS view", WINDOW_AUTOSIZE);
 	Mat frame;
-	
+	Serial *SP = new Serial(_T("COM4"));
+	if (SP->IsConnected()){
+		cout << "Arduino connected." << endl;
+		Sleep(3000);
+	}
+	else {
+		cerr << "Could not connect to Arduino." << endl;
+		Sleep(3000);
+		return -1;
+	}
+
 	// Creates videocapture object to capture from camera
 	VideoCapture capture;
-	if (!capture.open(0)) {
+	if (!capture.open(1)) {
 		cerr << "No camera stream found.";
 		//return -1;
 	}
@@ -438,11 +463,49 @@ int main()
 	// Get FOV and a few other parameters using the new camera matrix
 	calibrationMatrixValues(cameraMatrix, imsize, aperH, aperW, hfov, vfov, focalLength, princiPoint, aspectRatio);
 	
-	double tilt = 0.0;
-	double pan = 0.0;
+	double NewTiltAngle = 0.0;
+	double NewPanAngle = 0.0;
+	int inc = 1;
+	bool send_success;
+	bool begin_wait = false;
+	target_found = false;
+	target_centered = false;
 
+	vector<Point> found_points;
+	int counts = 0;
+
+	PanWord = (int)round((double)PanAngle / pan_increment);
+	TiltWord = (int)round((double)TiltAngle / tilt_increment);
+	cout << "Initializing position." << endl;
+	cout << "PanWord:";
+	cout << PanWord << endl;
+	servocomm += to_string(PanWord);
+	servocomm += ",";
+	cout << "TiltWord:";
+	cout << TiltWord << endl;
+	servocomm += to_string(TiltWord);
+	servocomm += "\n";
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = servocomm[i];
+	}
+	send_success = SP->WriteData(outdata, servocomm.length());
+	if (send_success) cout << "Commands successful!" << endl;
+	else cout << "Commands not successful." << endl;
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = 0;
+	}
+	cout << "servocomm: ";
+	cout << servocomm << endl;
+	//cout << data << endl;
+	servocomm = "";
+
+	time(&start_time);
+	
 	while (1) {
-		
+		time(&end_time);
+		if (end_time - start_time > 1)
+			begin_wait = false;
+
 		Mat frame_ud;
 		Mat I2;
 		// Put camera capture into matrix object
@@ -544,13 +607,6 @@ int main()
 						//center[z].x = momnts[i].m10 / momnts[i].m00;
 						//center[z].y = momnts[i].m01 / momnts[i].m00;
 						minEnclosingCircle(contours[i], center_circle[i], radii[z]);
-						//Point centerpoints;
-						//centerpoints.x = (int)center[z].x;
-						//centerpoints.y = (int)center[z].y;
-						// Draw the cente
-						//circle(I2, centerpoints, 4, (0, 0, 255), -1);
-						//cout << "center.x" << z << " = " << center[z].x << ", center.y" << z << " = " << center[z].y << endl;
-						//cout << "center.x" << z << " = " << center[z].x << ", center.y" << z << " = " << center[z].y << endl;
 						z++;
 					}
 				}
@@ -599,31 +655,89 @@ int main()
 				cout << "\rTarget found! Center at ( " << targetpoint.x << " , " << targetpoint.y << " )" << endl;
 				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
 					cout << "Camera locked on target at " << targetpoint.x << " , " << targetpoint.y << "! Initiating firing procedure!" << endl;
+					target_centered = true;
+				}
+				else target_centered = false;
+
+				//target_confirmed_points = targetpoint;
+				NewPanDelta = thetapPxW*round(view_center.x - targetpoint.x);
+				NewTiltDelta = thetapPxH*round(view_center.y - targetpoint.y);
+				if (!begin_wait) {
+					NewPanAngle = (PanAngle + NewPanDelta);
+					PanWord = (int)round((double)NewPanAngle / pan_increment);
+					NewTiltAngle = (TiltAngle + NewTiltDelta);
+					TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+					
+					//begin_wait = true;
 				}
 
-				OldPanDelta = NewPanDelta;
-				OldTiltDelta = NewTiltDelta;
-				NewPanDelta = thetapPxW*round(targetpoint.x - view_center.x);
-				NewTiltDelta = thetapPxH*round(targetpoint.y - view_center.y);
-				//PanAngle = PanAngle + NewPanAngle;
-				cout << "Increase pan angle by " << NewPanDelta << endl;
-				cout << "Increase tilt angle by " << NewTiltDelta << endl;
-				PanAngle += (NewPanDelta-OldPanDelta);
-				PanWord = (int)round((double)PanAngle / pan_increment);
-				TiltAngle += (NewTiltDelta - OldTiltDelta);
-				TiltWord = (int)round((double)TiltAngle / tilt_increment);
-				string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)",PanAngle,PanWord,TiltAngle,TiltWord);
+
+				string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
 				int baseLine = 0;
 				Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 				Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
-				cout << "Set Pan Angle to : " << PanAngle << " , " << PanWord << endl;
-				cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
+				//cout << "Set Pan Angle to : " << PanAngle << " , " << PanWord << endl;
+				//cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
 				putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
+
+				target_found = true;
+
+				/*if (found_points.size()<5)
+					found_points.push_back(targetpoint);
+				else {
+					
+					for (i = 0; i < found_points.size(); i++) {
+						for (j = 0; i < found_points.size(); i++) {
+							if (abs(found_points[i].x - found_points[j].x) < 5 &&
+								abs(found_points[i].y - found_points[j].y) < 5)
+								counts++;
+							if (counts >= 3) {
+								target_confirmed_points = found_points[i];
+								NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
+								NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
+								if (!begin_wait) {
+									NewPanAngle = (PanAngle + NewPanDelta);
+									PanWord = (int)round((double)NewPanAngle / pan_increment);
+									NewTiltAngle = (TiltAngle + NewTiltDelta);
+									TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+									time(&start_time);
+									//begin_wait = true;
+								}
+
+
+								string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
+								int baseLine = 0;
+								Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
+								Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
+								//cout << "Set Pan Angle to : " << PanAngle << " , " << PanWord << endl;
+								//cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
+								putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
+
+								target_found = true;
+								break;
+							}
+						}
+						if (counts >= 3) {
+							found_points.clear();
+							counts = 0;
+							break;
+						}
+					}
+				}*/
+
+				//OldPanDelta = NewPanDelta;
+				//OldTiltDelta = NewTiltDelta;
+				
+				
+				//PanAngle = PanAngle + NewPanAngle;
+				//cout << "Increase pan angle by " << NewPanDelta << endl;
+				//cout << "Increase tilt angle by " << NewTiltDelta << endl;
+
 				
 			}
 			// Otherwise, say no target was found
 			else {
-				cout << "\rObjects processed. Target not found..." << endl;
+				target_found = false; // cout << "\rObjects processed. Target not found..." << endl;
 			}
 		}
 		// If no green contours detected, say nothing found.
@@ -631,7 +745,69 @@ int main()
 			cout << "\rNo green objects detected. Target not found..." << endl;
 			
 		}
-		cout << "Center at " << view_center.x << " , " << view_center.y << endl;
+		if (target_found == false && SP->IsConnected() && begin_wait == false) {
+			if (PanAngle > 145.0 || PanAngle < 35.0)
+				inc = -1*inc;
+			PanAngle = PanAngle + inc*SCANINCREMENT;
+			//TiltAngle = (double)TiltWord*tilt_increment;
+			PanWord = PanAngle / pan_increment;
+			//TiltAngle = TiltAngle / tilt_increment;
+			//cout << "PanWord:";
+			//cout << PanWord << endl;
+			servocomm += to_string(PanWord);
+			servocomm += ",";
+			//cout << "TiltWord:";
+			//cout << TiltWord << endl;
+			servocomm += to_string(TiltWord);
+			servocomm += "\n";
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = servocomm[i];
+			}
+			send_success = SP->WriteData(outdata, servocomm.length());
+			if (send_success) cout << "Commands successful!" << endl;
+			else cout << "Commands not successful." << endl;
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = 0;
+			}
+			cout << "servocomm: ";
+			cout << servocomm << endl;
+			servocomm = "";
+
+			
+			time(&start_time);
+			begin_wait = true;
+		}
+		//time(&end_time);
+		
+		if (target_found == true && SP->IsConnected() && begin_wait == false) {
+			cout << "PanWord:";
+			cout << PanWord << endl;
+			servocomm += to_string(PanWord);
+			servocomm += ",";
+			cout << "TiltWord:";
+			cout << TiltWord << endl;
+			servocomm += to_string(TiltWord);
+			servocomm += "\n";
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = servocomm[i];
+			}
+			send_success = SP->WriteData(outdata, servocomm.length());
+			if (send_success) cout << "Commands successful!" << endl;
+			else cout << "Commands not successful." << endl;
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = 0;
+			}
+			cout << "servocomm: ";
+			cout << servocomm << endl;
+			servocomm = "";
+
+			PanAngle = (double)PanWord*pan_increment;
+			TiltAngle = (double)TiltWord*tilt_increment;
+			time(&start_time);
+			begin_wait = true;
+		}
+
+		//cout << "Center at " << view_center.x << " , " << view_center.y << endl;
 		imshow("camera_feed", frame);
 		key = cvWaitKey(10);
 		if (char(key) == 27) break;
