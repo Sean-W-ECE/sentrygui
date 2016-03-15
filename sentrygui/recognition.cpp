@@ -4,10 +4,18 @@
 using namespace cv;
 using namespace std;
 
+#define SCANINCREMENT 30;
+
 char key;
 int thresh = 127;
 int max_thresh = 255;
 RNG rng(12345);
+
+char outdata[64];
+string servocomm = "";
+
+bool target_found = false;
+bool target_centered = false;
 
 int cornersH = 6;
 int cornersV = 9;
@@ -15,8 +23,12 @@ int numSquares = cornersH*cornersV;
 
 double thetapPxH, thetapPxW;
 
+// Creates videocapture object to capture from camera
+VideoCapture capture;
+
+// These will have to change depending on what the previous angle was set to.
 double PanAngle = 90.0;
-double TiltAngle = 45.0;
+double TiltAngle = 90.0;
 
 unsigned int PanWord = 0;
 unsigned int TiltWord = 0;
@@ -27,9 +39,13 @@ double OldPanDelta = 0;
 double OldTiltDelta = 0;
 
 Point view_center;
+Point target_confirmed_points;
 
 double pan_increment = (double)180.0 / 1024.0;
-double tilt_increment = (double)90.0 / 1024.0;
+double tilt_increment = (double)180.0 / 1024.0;
+
+time_t start_time;
+time_t end_time;
 
 // For current target size, 5.5 inches in diameter,
 // 79 inches is the maximum detectable range.
@@ -43,12 +59,13 @@ enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
 recognition::recognition(QObject *parent)
 	: QObject(parent)
 {
-	
+	//init serial to null
+	SP = NULL;
 }
 
 recognition::~recognition()
 {
-
+	capture.release();
 }
 
 static double computeReprojectionErrors(
@@ -273,12 +290,24 @@ static bool runAndSave(const string& outputFilename,
 
 void recognition::process()
 {
-	// Creates videocapture object to capture from camera
-	VideoCapture capture;
-	if (!capture.open(0)) {
+	//initializes serial connection
+	Serial *SP = new Serial(_T(L"COM4"));
+	while (!(SP->IsConnected()))
+	{
+		cerr << "Could not connect to Arduino." << endl;
+		emit sendCamStatus(-1);
+		Sleep(3000);
+	}
+	//when connected, alert and wait for 3 seconds
+	cout << "Arduino connected." << endl;
+	emit sendCamStatus(4);
+	Sleep(3000);
+	
+	//repeatedly check if camera is connected and try to connect
+	while (!capture.open(0)) {
 		//cerr << "No camera stream found.";
 		emit sendCamStatus(0);
-		return;
+		Sleep(3000);
 	}
 	const string outputFilename = "calibration.xml";
 	//CvCapture * capture = cvCaptureFromCAM(CV_CAP_ANY);
@@ -313,7 +342,6 @@ void recognition::process()
 	int flags = CALIB_FIX_ASPECT_RATIO;
 
 	capture >> frame;
-
 	H = frame.rows;
 	W = frame.cols;
 	//vector<Point3f> checkboard;
@@ -383,7 +411,7 @@ void recognition::process()
 			//if (char(key) == 27)
 			//	return;
 
-			if (capture.isOpened() && calibrationStarted == 0) // 
+			if (capture.isOpened() && calibrationStarted == 0) //start calibration automatically
 			{
 				mode = CAPTURING;
 				image_points.clear();
@@ -406,6 +434,7 @@ void recognition::process()
 			}
 			if (mode == CALIBRATED) {
 				cout << "Camera successfully calibrated!" << endl;
+				emit sendCamStatus(3);
 				Sleep(3000);
 				break;
 			}
@@ -423,14 +452,52 @@ void recognition::process()
 	// Get FOV and a few other parameters using the new camera matrix
 	calibrationMatrixValues(cameraMatrix, imsize, aperH, aperW, hfov, vfov, focalLength, princiPoint, aspectRatio);
 
-	double tilt = 0.0;
-	double pan = 0.0;
+	double NewTiltAngle = 0.0;
+	double NewPanAngle = 0.0;
+	int inc = 1;
+	bool send_success;
+	bool begin_wait = false;
+	target_found = false;
+	target_centered = false;
+
+	vector<Point> found_points;
+	int counts = 0;
+
+	PanWord = (int)round((double)PanAngle / pan_increment);
+	TiltWord = (int)round((double)TiltAngle / tilt_increment);
+	cout << "Initializing position." << endl;
+	cout << "PanWord:";
+	cout << PanWord << endl;
+	servocomm += to_string(PanWord);
+	servocomm += ",";
+	cout << "TiltWord:";
+	cout << TiltWord << endl;
+	servocomm += to_string(TiltWord);
+	servocomm += "\n";
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = servocomm[i];
+	}
+	send_success = SP->WriteData(outdata, servocomm.length());
+	if (send_success) cout << "Commands successful!" << endl;
+	else cout << "Commands not successful." << endl;
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = 0;
+	}
+	cout << "servocomm: ";
+	cout << servocomm << endl;
+	//cout << data << endl;
+	servocomm = "";
+
+	time(&start_time);
 
 	//tell UI cam is entering scanning mode
 	emit sendCamStatus(2);
 
 	//main scanning function
 	while (1) {
+		time(&end_time);
+		if (end_time - start_time > 1)
+			begin_wait = false;
 
 		Mat frame_ud;
 		Mat I2;
@@ -531,13 +598,6 @@ void recognition::process()
 						//center[z].x = momnts[i].m10 / momnts[i].m00;
 						//center[z].y = momnts[i].m01 / momnts[i].m00;
 						minEnclosingCircle(contours[i], center_circle[i], radii[z]);
-						//Point centerpoints;
-						//centerpoints.x = (int)center[z].x;
-						//centerpoints.y = (int)center[z].y;
-						// Draw the cente
-						//circle(I2, centerpoints, 4, (0, 0, 255), -1);
-						//cout << "center.x" << z << " = " << center[z].x << ", center.y" << z << " = " << center[z].y << endl;
-						//cout << "center.x" << z << " = " << center[z].x << ", center.y" << z << " = " << center[z].y << endl;
 						z++;
 					}
 				}
@@ -581,27 +641,30 @@ void recognition::process()
 				cout << "\rTarget found! Center at ( " << targetpoint.x << " , " << targetpoint.y << " )" << endl;
 				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
 					cout << "Camera locked on target at " << targetpoint.x << " , " << targetpoint.y << "! Initiating firing procedure!" << endl;
+					target_centered = true;
+				}
+				else target_centered = false;
+
+				//target_confirmed_points = targetpoint;
+				NewPanDelta = thetapPxW*round(view_center.x - targetpoint.x);
+				NewTiltDelta = thetapPxH*round(view_center.y - targetpoint.y);
+				if (!begin_wait) {
+					NewPanAngle = (PanAngle + NewPanDelta);
+					PanWord = (int)round((double)NewPanAngle / pan_increment);
+					NewTiltAngle = (TiltAngle + NewTiltDelta);
+					TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+
+					//begin_wait = true;
 				}
 
-				OldPanDelta = NewPanDelta;
-				OldTiltDelta = NewTiltDelta;
-				NewPanDelta = thetapPxW*round(targetpoint.x - view_center.x);
-				NewTiltDelta = thetapPxH*round(targetpoint.y - view_center.y);
-				//PanAngle = PanAngle + NewPanAngle;
-				cout << "Increase pan angle by " << NewPanDelta << endl;
-				cout << "Increase tilt angle by " << NewTiltDelta << endl;
-				PanAngle += (NewPanDelta - OldPanDelta);
-				PanWord = (int)round((double)PanAngle / pan_increment);
-				TiltAngle += (NewTiltDelta - OldTiltDelta);
-				TiltWord = (int)round((double)TiltAngle / tilt_increment);
 				string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
 				int baseLine = 0;
 				Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 				Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
-				cout << "Set Pan Angle to : " << PanAngle << " , " << PanWord << endl;
-				cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
+				//cout << "Set Pan Angle to : " << PanAngle << " , " << PanWord << endl;
+				//cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
 				putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
-
+				target_found = true;
 			}
 			// Otherwise, say no target was found
 			else {
@@ -611,8 +674,73 @@ void recognition::process()
 		// If no green contours detected, say nothing found.
 		else {
 			cout << "\rNo green objects detected. Target not found..." << endl;
-
+			target_found = false;
 		}
+
+		//servo control when no target found
+		if (target_found == false && SP->IsConnected() && begin_wait == false) {
+			if (PanAngle > 145.0 || PanAngle < 35.0)
+				inc = -1 * inc;
+			PanAngle = PanAngle + inc*SCANINCREMENT;
+			//TiltAngle = (double)TiltWord*tilt_increment;
+			PanWord = PanAngle / pan_increment;
+			//TiltAngle = TiltAngle / tilt_increment;
+			//cout << "PanWord:";
+			//cout << PanWord << endl;
+			servocomm += to_string(PanWord);
+			servocomm += ",";
+			//cout << "TiltWord:";
+			//cout << TiltWord << endl;
+			servocomm += to_string(TiltWord);
+			servocomm += "\n";
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = servocomm[i];
+			}
+			send_success = SP->WriteData(outdata, servocomm.length());
+			if (send_success) cout << "Commands successful!" << endl;
+			else cout << "Commands not successful." << endl;
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = 0;
+			}
+			cout << "servocomm: ";
+			cout << servocomm << endl;
+			servocomm = "";
+
+
+			time(&start_time);
+			begin_wait = true;
+		}
+		//time(&end_time);
+
+		//servo control whene target is found
+		if (target_found == true && SP->IsConnected() && begin_wait == false) {
+			cout << "PanWord:";
+			cout << PanWord << endl;
+			servocomm += to_string(PanWord);
+			servocomm += ",";
+			cout << "TiltWord:";
+			cout << TiltWord << endl;
+			servocomm += to_string(TiltWord);
+			servocomm += "\n";
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = servocomm[i];
+			}
+			send_success = SP->WriteData(outdata, servocomm.length());
+			if (send_success) cout << "Commands successful!" << endl;
+			else cout << "Commands not successful." << endl;
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = 0;
+			}
+			cout << "servocomm: ";
+			cout << servocomm << endl;
+			servocomm = "";
+
+			PanAngle = (double)PanWord*pan_increment;
+			TiltAngle = (double)TiltWord*tilt_increment;
+			time(&start_time);
+			begin_wait = true;
+		}
+
 		cout << "Center at " << view_center.x << " , " << view_center.y << endl;
 		//convert frame to QImage
 		QImage image(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888);
@@ -620,10 +748,8 @@ void recognition::process()
 		//send frame to UI
 		emit sendImage(image);
 
-		key = cvWaitKey(10);
-		if (char(key) == 27) break;
-
 	}
+	//execution will never reach here in GUI version
 	capture.release();
 	return;
 }

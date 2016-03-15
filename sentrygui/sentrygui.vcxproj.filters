@@ -59,6 +59,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_recognition.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="serial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="sentrygui.h">
@@ -77,6 +80,9 @@
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_sentrygui.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SerialClass.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

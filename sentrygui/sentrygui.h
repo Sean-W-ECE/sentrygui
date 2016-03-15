@@ -32,6 +32,7 @@ private:
 	QPixmap map;
 	//item for scene
 	QGraphicsPixmapItem *mapItem;
+
 	//setup for thread
 	void setup();
 

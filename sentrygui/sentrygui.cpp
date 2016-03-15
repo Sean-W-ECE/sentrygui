@@ -55,6 +55,10 @@ void sentrygui::receiveImage(QImage image)
 
 void sentrygui::updateCamStatus(int stat)
 {
+	if (stat == -1)
+	{
+		ui.statusDisplay->setText("No Arduino connected");
+	}
 	if (stat == 0)
 	{
 		ui.statusDisplay->setText("No camera found");
@@ -66,5 +70,13 @@ void sentrygui::updateCamStatus(int stat)
 	if (stat == 2)
 	{
 		ui.statusDisplay->setText("Scanning");
+	}
+	if (stat == 3)
+	{
+		ui.statusDisplay->setText("Ready!");
+	}
+	if (stat == 4)
+	{
+		ui.statusDisplay->setText("Arduino connected");
 	}
 }

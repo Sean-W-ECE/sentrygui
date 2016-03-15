@@ -19,6 +19,7 @@
 #include <time.h>
 #include <cctype>
 #include <iterator>
+#include "SerialClass.h"
 
 class recognition : public QObject
 {
@@ -36,7 +37,7 @@ public:
 private:
 	cv::Mat frame;
 	cv::Mat I2;
-	
+	Serial *SP;
 
 signals:
 	void sendImage(QImage image);
