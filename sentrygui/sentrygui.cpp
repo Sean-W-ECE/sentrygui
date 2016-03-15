@@ -47,7 +47,7 @@ void sentrygui::setup()
 	scene.addItem(mapItem);
 	
 	//initialize console
-
+	ui.console->setReadOnly(1);
 }
 
 //receive image, convert to QImage, display to UI
