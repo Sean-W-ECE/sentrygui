@@ -42,6 +42,7 @@ private:
 signals:
 	void sendImage(QImage image);
 	void sendCamStatus(int stat);
+	void sendConsoleText(QString text);
 	
 public slots:
 	void receiveTurretAngles(double pan, double tilt);

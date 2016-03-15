@@ -18,7 +18,6 @@ sentrygui::~sentrygui()
 
 void sentrygui::setup()
 {
-	OutputDebugString((LPCWSTR)L"starting setup");
 	
 	thread = new QThread(this);
 	//create targeting module in new thread
@@ -30,6 +29,8 @@ void sentrygui::setup()
 	connect(recog, &recognition::sendImage, this, &sentrygui::receiveImage);
 	//attach cam status updater
 	connect(recog, &recognition::sendCamStatus, this, &sentrygui::updateCamStatus);
+	//attach console text writer
+	connect(recog, &recognition::sendConsoleText, this, &sentrygui::printConsole);
 
 	//move recog object to thread and start
 	recog->moveToThread(thread);
@@ -44,13 +45,21 @@ void sentrygui::setup()
 	mapItem = new QGraphicsPixmapItem();
 	//add item to scene
 	scene.addItem(mapItem);
-	//ui.camView->show();
+	
+	//initialize console
+
 }
 
 //receive image, convert to QImage, display to UI
 void sentrygui::receiveImage(QImage image)
 {
 	mapItem->setPixmap(QPixmap::fromImage(image));
+}
+
+//print text to console
+void sentrygui::printConsole(QString text)
+{
+	ui.console->append(text);
 }
 
 void sentrygui::updateCamStatus(int stat)

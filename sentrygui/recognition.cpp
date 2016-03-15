@@ -294,18 +294,19 @@ void recognition::process()
 	Serial *SP = new Serial(_T(L"COM4"));
 	while (!(SP->IsConnected()))
 	{
-		cerr << "Could not connect to Arduino." << endl;
+		emit sendConsoleText(QString("No Arduino found. Searching..."));
 		emit sendCamStatus(-1);
 		Sleep(3000);
 	}
 	//when connected, alert and wait for 3 seconds
-	cout << "Arduino connected." << endl;
+	emit sendConsoleText(QString("Arduino connected"));
+	emit sendConsoleText(QString("Waiting for 3 seconds"));
 	emit sendCamStatus(4);
 	Sleep(3000);
 	
 	//repeatedly check if camera is connected and try to connect
 	while (!capture.open(0)) {
-		//cerr << "No camera stream found.";
+		emit sendConsoleText(QString("No camera found. Searching..."));
 		emit sendCamStatus(0);
 		Sleep(3000);
 	}
@@ -433,7 +434,7 @@ void recognition::process()
 					break;
 			}
 			if (mode == CALIBRATED) {
-				cout << "Camera successfully calibrated!" << endl;
+				emit sendConsoleText(QString("Camera successfully calibrated."));
 				emit sendCamStatus(3);
 				Sleep(3000);
 				break;
@@ -441,7 +442,7 @@ void recognition::process()
 
 		}
 	}
-	cout << "Camera calibrated and calibration information saved." << endl;
+	emit sendConsoleText(QString("Camera calibrated and calibration information saved."));
 	string msg = "Camera calibrated and calibration information saved.";
 	int baseLine = 0;
 	Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);

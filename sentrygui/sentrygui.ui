@@ -353,7 +353,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QGraphicsView" name="console">
+  <widget class="QTextEdit" name="console">
    <property name="geometry">
     <rect>
      <x>710</x>

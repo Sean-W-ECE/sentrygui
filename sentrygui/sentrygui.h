@@ -46,6 +46,8 @@ public slots:
 	void receiveImage(QImage image);
 	//receive status messages about camera from recog
 	void updateCamStatus(int stat);
+	//receive console text and output to console pane
+	void printConsole(QString text);
 };
 
 #endif // SENTRYGUI_H

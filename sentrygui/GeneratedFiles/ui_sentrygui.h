@@ -18,6 +18,7 @@
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QTextEdit>
 #include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -42,7 +43,7 @@ public:
     QLabel *modeLabel;
     QLineEdit *modeDisplay;
     QGraphicsView *camView;
-    QGraphicsView *console;
+    QTextEdit *console;
 
     void setupUi(QWidget *sentryguiClass)
     {
@@ -202,7 +203,7 @@ public:
         camView = new QGraphicsView(sentryguiClass);
         camView->setObjectName(QStringLiteral("camView"));
         camView->setGeometry(QRect(20, 20, 661, 501));
-        console = new QGraphicsView(sentryguiClass);
+        console = new QTextEdit(sentryguiClass);
         console->setObjectName(QStringLiteral("console"));
         console->setGeometry(QRect(710, 20, 411, 501));
 
