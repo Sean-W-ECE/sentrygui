@@ -52,7 +52,7 @@ public:
         sentryguiClass->resize(1141, 618);
         layoutWidget = new QWidget(sentryguiClass);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
-        layoutWidget->setGeometry(QRect(210, 570, 721, 35));
+        layoutWidget->setGeometry(QRect(210, 570, 801, 35));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setSpacing(6);
         horizontalLayout->setContentsMargins(11, 11, 11, 11);
@@ -125,6 +125,11 @@ public:
 
         rangeLabel = new QLabel(layoutWidget);
         rangeLabel->setObjectName(QStringLiteral("rangeLabel"));
+        QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(rangeLabel->sizePolicy().hasHeightForWidth());
+        rangeLabel->setSizePolicy(sizePolicy1);
         rangeLabel->setFont(font);
         rangeLabel->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
@@ -145,7 +150,7 @@ public:
 
         layoutWidget1 = new QWidget(sentryguiClass);
         layoutWidget1->setObjectName(QStringLiteral("layoutWidget1"));
-        layoutWidget1->setGeometry(QRect(370, 530, 371, 35));
+        layoutWidget1->setGeometry(QRect(370, 530, 474, 35));
         horizontalLayout_2 = new QHBoxLayout(layoutWidget1);
         horizontalLayout_2->setSpacing(6);
         horizontalLayout_2->setContentsMargins(11, 11, 11, 11);
@@ -154,6 +159,7 @@ public:
         statusLabel = new QLabel(layoutWidget1);
         statusLabel->setObjectName(QStringLiteral("statusLabel"));
         statusLabel->setFont(font);
+        statusLabel->setScaledContents(true);
         statusLabel->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
         horizontalLayout_2->addWidget(statusLabel);
@@ -161,28 +167,31 @@ public:
         statusDisplay = new QLineEdit(layoutWidget1);
         statusDisplay->setObjectName(QStringLiteral("statusDisplay"));
         statusDisplay->setEnabled(true);
-        QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Fixed);
-        sizePolicy1.setHorizontalStretch(0);
-        sizePolicy1.setVerticalStretch(0);
-        sizePolicy1.setHeightForWidth(statusDisplay->sizePolicy().hasHeightForWidth());
-        statusDisplay->setSizePolicy(sizePolicy1);
-        statusDisplay->setMaximumSize(QSize(200, 16777215));
+        QSizePolicy sizePolicy2(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(0);
+        sizePolicy2.setHeightForWidth(statusDisplay->sizePolicy().hasHeightForWidth());
+        statusDisplay->setSizePolicy(sizePolicy2);
+        statusDisplay->setMaximumSize(QSize(300, 16777215));
         statusDisplay->setFont(font);
         statusDisplay->setMouseTracking(false);
         statusDisplay->setAcceptDrops(false);
+        statusDisplay->setFrame(true);
+        statusDisplay->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         statusDisplay->setReadOnly(true);
 
         horizontalLayout_2->addWidget(statusDisplay);
 
         modeLabel = new QLabel(layoutWidget1);
         modeLabel->setObjectName(QStringLiteral("modeLabel"));
-        QSizePolicy sizePolicy2(QSizePolicy::Minimum, QSizePolicy::Preferred);
-        sizePolicy2.setHorizontalStretch(0);
-        sizePolicy2.setVerticalStretch(0);
-        sizePolicy2.setHeightForWidth(modeLabel->sizePolicy().hasHeightForWidth());
-        modeLabel->setSizePolicy(sizePolicy2);
+        QSizePolicy sizePolicy3(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(modeLabel->sizePolicy().hasHeightForWidth());
+        modeLabel->setSizePolicy(sizePolicy3);
         modeLabel->setMinimumSize(QSize(50, 0));
         modeLabel->setFont(font);
+        modeLabel->setScaledContents(true);
         modeLabel->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
         horizontalLayout_2->addWidget(modeLabel);
@@ -215,7 +224,7 @@ public:
     void retranslateUi(QWidget *sentryguiClass)
     {
         sentryguiClass->setWindowTitle(QApplication::translate("sentryguiClass", "sentrygui", 0));
-        camVLabel->setText(QApplication::translate("sentryguiClass", "Vertical Pitch", 0));
+        camVLabel->setText(QApplication::translate("sentryguiClass", "Pitch", 0));
         turretHLabel->setText(QApplication::translate("sentryguiClass", "Turret Pan", 0));
         camHLabel->setText(QApplication::translate("sentryguiClass", "Camera Pan", 0));
         rangeLabel->setText(QApplication::translate("sentryguiClass", "Range", 0));
