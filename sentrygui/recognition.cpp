@@ -467,25 +467,29 @@ void recognition::process()
 	PanWord = (int)round((double)PanAngle / pan_increment);
 	TiltWord = (int)round((double)TiltAngle / tilt_increment);
 	cout << "Initializing position." << endl;
-	cout << "PanWord:";
-	cout << PanWord << endl;
+	emit sendConsoleText(QString("Initializing position."));
+	QString consoleMessage = "PanWord: " + PanWord;
+	emit sendConsoleText(QString(consoleMessage));
+	/*cout << "PanWord:";
+	cout << PanWord << endl;*/
 	servocomm += to_string(PanWord);
 	servocomm += ",";
-	cout << "TiltWord:";
-	cout << TiltWord << endl;
+	consoleMessage = "TiltWord: " + TiltWord;
+	emit sendConsoleText(consoleMessage);
+	/*cout << "TiltWord:";
+	cout << TiltWord << endl;*/
 	servocomm += to_string(TiltWord);
 	servocomm += "\n";
 	for (int i = 0; i < servocomm.length(); i++) {
 		outdata[i] = servocomm[i];
 	}
 	send_success = SP->WriteData(outdata, servocomm.length());
-	if (send_success) cout << "Commands successful!" << endl;
-	else cout << "Commands not successful." << endl;
+	if (send_success) emit sendConsoleText(QString("Commands successful"));
+	else emit sendConsoleText(QString("Commands failed"));
 	for (int i = 0; i < servocomm.length(); i++) {
 		outdata[i] = 0;
 	}
-	cout << "servocomm: ";
-	cout << servocomm << endl;
+	emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
 	//cout << data << endl;
 	servocomm = "";
 
@@ -639,9 +643,11 @@ void recognition::process()
 				targetpoint.y = (int)centerfin.y;
 				circle(frame, targetpoint, 4, (0, 0, 255), -1);
 
-				cout << "\rTarget found! Center at ( " << targetpoint.x << " , " << targetpoint.y << " )" << endl;
+				consoleMessage = QString("\rTarget found! Center at ( %1 , %2 )").arg(targetpoint.x,targetpoint.y);
+				emit sendConsoleText(consoleMessage);
 				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
-					cout << "Camera locked on target at " << targetpoint.x << " , " << targetpoint.y << "! Initiating firing procedure!" << endl;
+					consoleMessage = QString("Camera locked on target at %1 , %2! Initiating firing procedure!").arg(targetpoint.x, targetpoint.y);
+					emit sendConsoleText(consoleMessage);
 					target_centered = true;
 				}
 				else target_centered = false;
@@ -674,7 +680,7 @@ void recognition::process()
 		}
 		// If no green contours detected, say nothing found.
 		else {
-			cout << "\rNo green objects detected. Target not found..." << endl;
+			emit sendConsoleText(QString("No green objects detected. Target not found..."));
 			target_found = false;
 		}
 
@@ -698,13 +704,13 @@ void recognition::process()
 				outdata[i] = servocomm[i];
 			}
 			send_success = SP->WriteData(outdata, servocomm.length());
-			if (send_success) cout << "Commands successful!" << endl;
-			else cout << "Commands not successful." << endl;
+			if (send_success) emit sendConsoleText(QString("Commands successful"));
+			else emit sendConsoleText(QString("Commands failed"));
 			for (int i = 0; i < servocomm.length(); i++) {
 				outdata[i] = 0;
 			}
-			cout << "servocomm: ";
-			cout << servocomm << endl;
+			consoleMessage = "servocomm: " + QString(servocomm.c_str());
+			emit sendConsoleText(consoleMessage);
 			servocomm = "";
 
 
@@ -713,12 +719,16 @@ void recognition::process()
 		}
 		//time(&end_time);
 
-		//servo control whene target is found
+		//servo control when target is found
 		if (target_found == true && SP->IsConnected() && begin_wait == false) {
 			cout << "PanWord:";
 			cout << PanWord << endl;
+			consoleMessage = "PanWord:" + PanWord;
+			emit sendConsoleText(consoleMessage);
 			servocomm += to_string(PanWord);
 			servocomm += ",";
+			consoleMessage = "TiltWord:" + TiltWord;
+			emit sendConsoleText(consoleMessage);
 			cout << "TiltWord:";
 			cout << TiltWord << endl;
 			servocomm += to_string(TiltWord);
@@ -727,13 +737,13 @@ void recognition::process()
 				outdata[i] = servocomm[i];
 			}
 			send_success = SP->WriteData(outdata, servocomm.length());
-			if (send_success) cout << "Commands successful!" << endl;
-			else cout << "Commands not successful." << endl;
+			if (send_success) emit sendConsoleText(QString("Commands successful"));
+			else emit sendConsoleText(QString("Commands failed"));
 			for (int i = 0; i < servocomm.length(); i++) {
 				outdata[i] = 0;
 			}
-			cout << "servocomm: ";
-			cout << servocomm << endl;
+			consoleMessage = "servocomm: " + QString(servocomm.c_str());
+			emit sendConsoleText(consoleMessage);
 			servocomm = "";
 
 			PanAngle = (double)PanWord*pan_increment;
@@ -742,7 +752,8 @@ void recognition::process()
 			begin_wait = true;
 		}
 
-		cout << "Center at " << view_center.x << " , " << view_center.y << endl;
+		consoleMessage = QString("Center at %1 , %2").arg(view_center.x, view_center.y);
+		emit sendConsoleText(consoleMessage);
 		//convert frame to QImage
 		QImage image(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888);
 		image = image.rgbSwapped();
