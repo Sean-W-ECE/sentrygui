@@ -25,6 +25,8 @@ double thetapPxH, thetapPxW;
 
 // Creates videocapture object to capture from camera
 VideoCapture capture;
+//used to kill main loop when quitting
+bool haltProcess;
 
 // These will have to change depending on what the previous angle was set to.
 double PanAngle = 90.0;
@@ -61,6 +63,7 @@ recognition::recognition(QObject *parent)
 {
 	//init serial to null
 	SP = NULL;
+	haltProcess = false;
 }
 
 recognition::~recognition()
@@ -303,13 +306,30 @@ void recognition::process()
 	emit sendConsoleText(QString("Waiting for 3 seconds"));
 	emit sendCamStatus(4);
 	Sleep(3000);
+
+	bool cameraOpened = false;
 	
 	//repeatedly check if camera is connected and try to connect
-	while (!capture.open(0)) {
-		emit sendConsoleText(QString("No camera found. Searching..."));
-		emit sendCamStatus(0);
-		Sleep(3000);
-	}
+	//connect to highest-numbered camera in system
+	do
+	{
+		int searchI;
+		for (searchI = 9; searchI >= 0; searchI--)
+		{
+			if (capture.open(searchI))
+			{
+				cameraOpened = true;
+				break;
+			}
+		}
+		if (searchI == 0 && !cameraOpened)
+		{
+			emit sendConsoleText(QString("No camera found. Searching..."));
+			emit sendCamStatus(0);
+			Sleep(1000);
+		}
+	} while (!cameraOpened);
+	
 	const string outputFilename = "calibration.xml";
 	//CvCapture * capture = cvCaptureFromCAM(CV_CAP_ANY);
 	Size cb_size = Size(cornersV, cornersH);
@@ -499,7 +519,7 @@ void recognition::process()
 	emit sendCamStatus(2);
 
 	//main scanning function
-	while (1) {
+	while (!haltProcess) {
 		time(&end_time);
 		if (end_time - start_time > 1)
 			begin_wait = false;
@@ -761,9 +781,14 @@ void recognition::process()
 		emit sendImage(image);
 
 	}
-	//execution will never reach here in GUI version
+	//release camera
 	capture.release();
 	return;
+}
+
+void recognition::endCapture()
+{
+	haltProcess = true;
 }
 
 void recognition::receiveTurretAngles(double pan, double tilt)

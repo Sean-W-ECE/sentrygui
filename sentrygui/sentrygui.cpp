@@ -25,6 +25,7 @@ void sentrygui::setup()
 	//connect basics
 	connect(thread, &QThread::finished, recog, &QObject::deleteLater);
 	connect(this, &sentrygui::startProcess, recog, &recognition::process);
+	connect(this, &sentrygui::endProcess, recog, &recognition::endCapture);
 	//link mat to qimage converter
 	connect(recog, &recognition::sendImage, this, &sentrygui::receiveImage);
 	//attach cam status updater

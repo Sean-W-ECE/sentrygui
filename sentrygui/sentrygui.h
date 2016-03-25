@@ -21,6 +21,7 @@ public:
 signals:
 	void sendTurretAngles(double pan, double tilt);
 	void startProcess();
+	void endProcess();
 
 private:
 	Ui::sentryguiClass ui;

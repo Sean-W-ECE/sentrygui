@@ -40,6 +40,7 @@ private:
 	Serial *SP;
 
 signals:
+	//void done();
 	void sendImage(QImage image);
 	void sendCamStatus(int stat);
 	void sendConsoleText(QString text);
@@ -47,6 +48,7 @@ signals:
 public slots:
 	void receiveTurretAngles(double pan, double tilt);
 	void process();
+	void endCapture();
 };
 
 #endif // RECOGNITION_H
