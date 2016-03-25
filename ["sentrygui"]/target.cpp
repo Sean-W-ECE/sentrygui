@@ -702,16 +702,16 @@ int main()
 
 				//target_found = true;
 
-				if (found_points.size()<5)
+				if (found_points.size()<3)
 					found_points.push_back(targetpoint);
 				else {
 					
 					for (i = 0; i < found_points.size(); i++) {
 						for (j = 0; i < found_points.size(); i++) {
-							if (abs(found_points[i].x - found_points[j].x) < 5 &&
-								abs(found_points[i].y - found_points[j].y) < 5)
+							if (abs(found_points[i].x - found_points[j].x) < 3 &&
+								abs(found_points[i].y - found_points[j].y) < 3)
 								counts++;
-							if (counts >= 3) {
+							if (counts >= 2) {
 								target_confirmed_points = found_points[i];
 								NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
 								NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
