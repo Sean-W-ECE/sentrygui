@@ -19,7 +19,7 @@
 using namespace cv;
 using namespace std;
 
-#define SCANINCREMENT 30;
+#define SCANINCREMENT 15;
 
 char key;
 int thresh = 127;
@@ -55,6 +55,8 @@ Point target_confirmed_points;
 
 double pan_increment = (double)180.0 / 1024.0;
 double tilt_increment = (double)180.0 / 1024.0;
+
+int sector = 6;
 
 time_t start_time;
 time_t end_time;
@@ -311,10 +313,14 @@ int main()
 
 	// Creates videocapture object to capture from camera
 	VideoCapture capture;
-	if (!capture.open(1)) {
+	for (int i = 10; i >= 0; i--) {
+		if (capture.open(i)) break;
+		
+	}
+	/*if (!capture.open(1)) {
 		cerr << "No camera stream found.";
 		//return -1;
-	}
+	}*/
 	const string outputFilename = "calibration.xml";
 	//CvCapture * capture = cvCaptureFromCAM(CV_CAP_ANY);
 	Size cb_size = Size(cornersV, cornersH);
@@ -462,7 +468,11 @@ int main()
 	
 	// Get FOV and a few other parameters using the new camera matrix
 	calibrationMatrixValues(cameraMatrix, imsize, aperH, aperW, hfov, vfov, focalLength, princiPoint, aspectRatio);
-	
+
+	/*==============================================================================================================
+	================================================================================================================
+	==============================================================================================================*/
+
 	double NewTiltAngle = 0.0;
 	double NewPanAngle = 0.0;
 	int inc = 1;
@@ -503,7 +513,7 @@ int main()
 	
 	while (1) {
 		time(&end_time);
-		if (end_time - start_time > 1)
+		if (end_time - start_time > 3)
 			begin_wait = false;
 
 		Mat frame_ud;
@@ -513,6 +523,11 @@ int main()
 		if (frame.empty()) break;
 
 		undistort(frame, frame_ud, cameraMatrix, distCoeffs);
+
+		if (target_centered) {
+			// Run compensation module
+
+		}
 
 		// Convert screencap into HLS from RGB
 		cvtColor(frame_ud, I2, CV_BGR2HLS);
@@ -656,6 +671,7 @@ int main()
 				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
 					cout << "Camera locked on target at " << targetpoint.x << " , " << targetpoint.y << "! Initiating firing procedure!" << endl;
 					target_centered = true;
+
 				}
 				else target_centered = false;
 
@@ -665,8 +681,12 @@ int main()
 				if (!begin_wait) {
 					NewPanAngle = (PanAngle + NewPanDelta);
 					PanWord = (int)round((double)NewPanAngle / pan_increment);
+					if (PanWord < 0) PanWord = 0;
+					if (PanWord > 1023) PanWord = 1023;
 					NewTiltAngle = (TiltAngle + NewTiltDelta);
 					TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+					if (TiltWord < 0) TiltWord = 0;
+					if (TiltWord > 1023) TiltWord = 1023;
 					
 					//begin_wait = true;
 				}
@@ -680,18 +700,18 @@ int main()
 				//cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
 				putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
 
-				target_found = true;
+				//target_found = true;
 
-				/*if (found_points.size()<5)
+				if (found_points.size()<3)
 					found_points.push_back(targetpoint);
 				else {
 					
 					for (i = 0; i < found_points.size(); i++) {
 						for (j = 0; i < found_points.size(); i++) {
-							if (abs(found_points[i].x - found_points[j].x) < 5 &&
-								abs(found_points[i].y - found_points[j].y) < 5)
+							if (abs(found_points[i].x - found_points[j].x) < 3 &&
+								abs(found_points[i].y - found_points[j].y) < 3)
 								counts++;
-							if (counts >= 3) {
+							if (counts >= 2) {
 								target_confirmed_points = found_points[i];
 								NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
 								NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
@@ -723,7 +743,7 @@ int main()
 							break;
 						}
 					}
-				}*/
+				}
 
 				//OldPanDelta = NewPanDelta;
 				//OldTiltDelta = NewTiltDelta;
@@ -748,7 +768,9 @@ int main()
 		if (target_found == false && SP->IsConnected() && begin_wait == false) {
 			if (PanAngle > 145.0 || PanAngle < 35.0)
 				inc = -1*inc;
-			PanAngle = PanAngle + inc*SCANINCREMENT;
+			sector += inc;
+			PanAngle = sector*SCANINCREMENT;
+			//PanAngle = PanAngle + inc*SCANINCREMENT;
 			//TiltAngle = (double)TiltWord*tilt_increment;
 			PanWord = PanAngle / pan_increment;
 			//TiltAngle = TiltAngle / tilt_increment;

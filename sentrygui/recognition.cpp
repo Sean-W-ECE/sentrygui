@@ -4,7 +4,7 @@
 using namespace cv;
 using namespace std;
 
-#define SCANINCREMENT 30;
+#define SCANINCREMENT 15;
 
 char key;
 int thresh = 127;
@@ -45,6 +45,8 @@ Point target_confirmed_points;
 
 double pan_increment = (double)180.0 / 1024.0;
 double tilt_increment = (double)180.0 / 1024.0;
+
+int sector = 6;
 
 time_t start_time;
 time_t end_time;
