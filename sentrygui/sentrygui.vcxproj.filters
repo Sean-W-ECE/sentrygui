@@ -62,6 +62,9 @@
     <ClCompile Include="serial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="compensator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="sentrygui.h">
@@ -82,6 +85,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="SerialClass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="compensator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
