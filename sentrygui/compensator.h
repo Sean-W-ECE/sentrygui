@@ -1,4 +1,7 @@
 #pragma once
+#include <iostream>
+#include <fstream>
+#include <string>
 
 /*
 	Compensator module
@@ -11,4 +14,10 @@ class compensator
 public:
 	compensator();
 	~compensator();
+	void init();
+
+private:
+	//matrix of base compensation values
+	//will be [tilt][distance]
+	double** compensation;
 };
