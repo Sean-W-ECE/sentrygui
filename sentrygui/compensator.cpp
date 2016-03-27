@@ -5,6 +5,9 @@ using namespace std;
 #define TILTSIZE 1024
 #define RANGESIZE 2048
 
+//file that data is read from / stored to
+fstream srcFile;
+
 compensator::compensator()
 {
 	//init matrix to NULL
@@ -24,6 +27,10 @@ compensator::~compensator()
 		delete[] compensation;
 		compensation = NULL;
 	}
+	if (srcFile.is_open())
+	{
+		srcFile.close();
+	}
 }
 
 /*
@@ -38,14 +45,13 @@ void compensator::init()
 	if (compensation == NULL)
 	{
 		//allocate the matrix
-		compensation = new double*[TILTSIZE];
+		compensation = new int*[TILTSIZE];
 		for (int i = 0; i < TILTSIZE; i++)
 		{
-			compensation[i] = new double[RANGESIZE];
+			compensation[i] = new int[RANGESIZE];
 		}
 		
 		//try to read from file to fill matrix
-		fstream srcFile;
 		srcFile.open("compensation.txt");
 		if (srcFile.is_open())
 		{
@@ -67,4 +73,52 @@ void compensator::init()
 			}
 		}
 	}
+}
+
+/*
+	compensate(unsigned int TiltWord, unsigned int Range)
+
+	Returns the compensation angle for given tilt and range
+*/
+compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
+{
+	//create return object
+	compData retVal = compData();
+	//error checking
+	if (TiltWord > (TILTSIZE - 1) || Range > (RANGESIZE - 1))
+	{
+		//status = 1 means input error
+		retVal.Tilt = 0;
+		retVal.status = 1;
+	}
+	else
+	{
+		//if not in error, look up modifier in table
+		int mod = compensation[TiltWord][Range];
+		//if mod is positive or 0, add to TiltWord, but bound to TILTSIZE
+		if (mod >= 0)
+		{
+			retVal.Tilt = TiltWord + mod;
+			if (!(retVal.Tilt < TILTSIZE))
+			{
+				retVal.Tilt = TILTSIZE - 1;
+				retVal.status = 10;
+			}
+		}
+		//if mod is negative, subtract from TiltWord, but bound to 0
+		else
+		{
+			mod = abs(mod);
+			if (mod > TiltWord)
+			{
+				retVal.Tilt = 0;
+				retVal.status = 11;
+			}
+			else
+			{
+				retVal.Tilt = TiltWord - mod;
+			}
+		}
+	}
+	return retVal;
 }

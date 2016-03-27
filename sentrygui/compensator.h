@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include "compData.h"
 
 /*
 	Compensator module
@@ -15,9 +16,11 @@ public:
 	compensator();
 	~compensator();
 	void init();
+	compData compensate(unsigned int TiltWord, unsigned int Range);
 
 private:
-	//matrix of base compensation values
+	//matrix of base compensation values.
+	//Stored values are modifiers on input values
 	//will be [tilt][distance]
-	double** compensation;
+	int** compensation;
 };

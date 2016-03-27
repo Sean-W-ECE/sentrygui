@@ -65,6 +65,9 @@
     <ClCompile Include="compensator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="compData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="sentrygui.h">
@@ -88,6 +91,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="compensator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="compData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

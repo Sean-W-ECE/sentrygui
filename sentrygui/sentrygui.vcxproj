@@ -145,6 +145,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="compData.cpp" />
     <ClCompile Include="compensator.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_recognition.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -218,6 +219,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="compData.h" />
     <ClInclude Include="compensator.h" />
     <ClInclude Include="GeneratedFiles\ui_sentrygui.h" />
     <ClInclude Include="SerialClass.h" />

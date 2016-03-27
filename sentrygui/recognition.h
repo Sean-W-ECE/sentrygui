@@ -20,6 +20,7 @@
 #include <cctype>
 #include <iterator>
 #include "SerialClass.h"
+#include "compData.h"
 
 class recognition : public QObject
 {
