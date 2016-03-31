@@ -47,7 +47,6 @@ signals:
 	void sendConsoleText(QString text);
 	
 public slots:
-	void receiveTurretAngles(double pan, double tilt);
 	void process();
 	void endCapture();
 };

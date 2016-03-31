@@ -16,6 +16,8 @@ string servocomm = "";
 
 bool target_found = false;
 bool target_centered = false;
+bool read_range = false;
+bool fire = false;
 
 int cornersH = 6;
 int cornersV = 9;
@@ -43,8 +45,8 @@ double OldTiltDelta = 0;
 Point view_center;
 Point target_confirmed_points;
 
-double pan_increment = (double)180.0 / 1024.0;
-double tilt_increment = (double)180.0 / 1024.0;
+double pan_increment = (double)180.0 / 1023.0;
+double tilt_increment = (double)180.0 / 1023.0;
 
 int sector = 6;
 
@@ -296,7 +298,7 @@ static bool runAndSave(const string& outputFilename,
 void recognition::process()
 {
 	//initializes serial connection
-	Serial *SP = new Serial(_T(L"COM4"));
+	SP = new Serial(_T(L"COM4"));
 	while (!(SP->IsConnected()))
 	{
 		emit sendConsoleText(QString("No Arduino found. Searching..."));
@@ -430,11 +432,8 @@ void recognition::process()
 			//send frame to UI
 			emit sendImage(image);
 
-			//key = cvWaitKey(50);
-			//if (char(key) == 27)
-			//	return;
-
-			if (capture.isOpened() && calibrationStarted == 0) //start calibration automatically
+			//start calibration automatically
+			if (capture.isOpened() && calibrationStarted == 0)
 			{
 				mode = CAPTURING;
 				image_points.clear();
@@ -494,16 +493,23 @@ void recognition::process()
 	emit sendConsoleText(QString("Initializing position."));
 	QString consoleMessage = "PanWord: " + PanWord;
 	emit sendConsoleText(QString(consoleMessage));
-	/*cout << "PanWord:";
-	cout << PanWord << endl;*/
+
+	//add PanWord to serial transmit packet
 	servocomm += to_string(PanWord);
 	servocomm += ",";
 	consoleMessage = "TiltWord: " + TiltWord;
 	emit sendConsoleText(consoleMessage);
-	/*cout << "TiltWord:";
-	cout << TiltWord << endl;*/
+	//add TiltWord to serial transmit packet
 	servocomm += to_string(TiltWord);
+	servocomm += ",";
+	//add flags to serial transmit packet
+	servocomm += to_string(target_centered);
+	servocomm += ",";
+	servocomm += to_string(read_range);
+	servocomm += ",";
+	servocomm += to_string(fire);
 	servocomm += "\n";
+	//send packet to Arduino
 	for (int i = 0; i < servocomm.length(); i++) {
 		outdata[i] = servocomm[i];
 	}
@@ -514,7 +520,6 @@ void recognition::process()
 		outdata[i] = 0;
 	}
 	emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
-	//cout << data << endl;
 	servocomm = "";
 
 	time(&start_time);
@@ -779,6 +784,13 @@ void recognition::process()
 			//cout << "TiltWord:";
 			//cout << TiltWord << endl;
 			servocomm += to_string(TiltWord);
+			servocomm += ",";
+			//add flags to serial transmit packet
+			servocomm += to_string(target_centered);
+			servocomm += ",";
+			servocomm += to_string(read_range);
+			servocomm += ",";
+			servocomm += to_string(fire);
 			servocomm += "\n";
 			for (int i = 0; i < servocomm.length(); i++) {
 				outdata[i] = servocomm[i];
@@ -812,6 +824,13 @@ void recognition::process()
 			cout << "TiltWord:";
 			cout << TiltWord << endl;
 			servocomm += to_string(TiltWord);
+			servocomm += ",";
+			//add flags to serial transmit packet
+			servocomm += to_string(target_centered);
+			servocomm += ",";
+			servocomm += to_string(read_range);
+			servocomm += ",";
+			servocomm += to_string(fire);
 			servocomm += "\n";
 			for (int i = 0; i < servocomm.length(); i++) {
 				outdata[i] = servocomm[i];
@@ -838,15 +857,12 @@ void recognition::process()
 	}
 	//release camera
 	capture.release();
+	//free serial port
+	SP->~Serial();
 	return;
 }
 
 void recognition::endCapture()
 {
 	haltProcess = true;
-}
-
-void recognition::receiveTurretAngles(double pan, double tilt)
-{
-	//TODO
 }
