@@ -175,6 +175,7 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="recognition.cpp" />
+    <ClCompile Include="rfindercomm.cpp" />
     <ClCompile Include="sentrygui.cpp" />
     <ClCompile Include="serial.cpp" />
   </ItemGroup>

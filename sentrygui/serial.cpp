@@ -27,7 +27,7 @@ Serial::Serial(const wchar_t* portName)
 		}
 		else
 		{
-			printf("ERROR!!!");
+			printf("ERROR code %ld",GetLastError());
 		}
 	}
 	else
@@ -44,7 +44,7 @@ Serial::Serial(const wchar_t* portName)
 		else
 		{
 			//Define serial connection parameters for the arduino board
-			dcbSerialParams.BaudRate = CBR_9600;
+			dcbSerialParams.BaudRate = CBR_115200;
 			dcbSerialParams.ByteSize = 8;
 			dcbSerialParams.StopBits = ONESTOPBIT;
 			dcbSerialParams.Parity = NOPARITY;
@@ -92,7 +92,8 @@ int Serial::ReadData(char *buffer, unsigned int nbChar)
 
 	//Use the ClearCommError function to get status info on the Serial port
 	ClearCommError(this->hSerial, &this->errors, &this->status);
-
+	//printf("ClearCommError code %ld\n",GetLastError());
+	//printf("cbInQue: %d\n", this->status.cbInQue);
 	//Check if there is something to read
 	if (this->status.cbInQue>0)
 	{
@@ -113,9 +114,9 @@ int Serial::ReadData(char *buffer, unsigned int nbChar)
 		{
 			return bytesRead;
 		}
-
+		else printf("Error code: %ld\n",GetLastError());
 	}
-
+	
 	//If nothing has been read, or that an error was detected return 0
 	return 0;
 

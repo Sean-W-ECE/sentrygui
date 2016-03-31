@@ -68,6 +68,9 @@
     <ClCompile Include="compData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="rfindercomm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="sentrygui.h">
