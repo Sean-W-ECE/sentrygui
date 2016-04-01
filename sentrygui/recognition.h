@@ -48,6 +48,7 @@ private:
 	double hfov, vfov;
 
 	void sendFrame(cv::Mat& frame);
+	void moveTurret();
 
 signals:
 	//void done();

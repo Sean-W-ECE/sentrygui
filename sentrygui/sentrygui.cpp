@@ -45,6 +45,8 @@ void sentrygui::setup()
 	connect(recog, &recognition::sendInit, this, &sentrygui::getInitialized);
 	//connect calibrated flag
 	connect(recog, &recognition::sendCalibrated, this, &sentrygui::getCalibration);
+	//connect manual mode
+	connect(this, &sentrygui::startManual, recog, &recognition::manual);
 
 	//move recog object to thread and start
 	recog->moveToThread(thread);
@@ -75,7 +77,8 @@ void sentrygui::setup()
 		QCoreApplication::processEvents(0);
 	}
 	//start scanning
-	emit startProcess();
+	emit startManual();
+	state = 1;
 }
 
 //receive image, convert to QImage, display to UI

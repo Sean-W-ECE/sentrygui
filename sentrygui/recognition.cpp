@@ -16,10 +16,12 @@ char outdata[64];
 string servocomm = "";
 
 int calibrationStarted = 0;
+
 bool target_found = false;
 bool target_centered = false;
 bool read_range = false;
 bool fire = false;
+QString consoleMessage;
 
 int cornersH = 6;
 int cornersV = 9;
@@ -29,7 +31,7 @@ double thetapPxH, thetapPxW;
 
 // Creates videocapture object to capture from camera
 VideoCapture capture;
-//used to kill main loop when quitting
+//used to kill loops (manual and auto)
 bool haltProcess;
 //reset turret position
 bool resetSentry;
@@ -496,11 +498,54 @@ void recognition::calibrate()
 
 void recognition::manual()
 {
-	capture >> frame;
-	sendFrame(frame);
-	QCoreApplication::processEvents(0);
+	while (haltProcess == false)
+	{
+		capture >> frame;
+		sendFrame(frame);
+		QCoreApplication::processEvents(0);
+	}
+	haltProcess = false;
 }
 
+void recognition::moveTurret()
+{
+	bool send_success;
+	
+	//add PanWord to serial transmit packet
+	consoleMessage = "PanWord: " + PanWord;
+	emit sendConsoleText(QString(consoleMessage));
+	servocomm += to_string(PanWord);
+	servocomm += ",";
+	
+	//add TiltWord to serial transmit packet
+	consoleMessage = "TiltWord: " + TiltWord;
+	emit sendConsoleText(consoleMessage);
+	servocomm += to_string(TiltWord);
+	servocomm += ",";
+
+	//add flags to serial transmit packet
+	servocomm += to_string(target_centered);
+	servocomm += ",";
+	servocomm += to_string(read_range);
+	servocomm += ",";
+	servocomm += to_string(fire);
+	servocomm += "\n";
+
+	//send packet to Arduino
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = servocomm[i];
+	}
+	send_success = SP->WriteData(outdata, servocomm.length());
+	if (send_success) emit sendConsoleText(QString("Commands successful"));
+	else emit sendConsoleText(QString("Commands failed"));
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = 0;
+	}
+	emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
+	servocomm = "";
+}
+
+/*Automatic targeting process*/
 void recognition::process()
 {
 
@@ -518,39 +563,9 @@ void recognition::process()
 	int counts = 0;
 
 	//Initialize position
-	PanWord = (int)round((double)PanAngle / pan_increment);
-	TiltWord = (int)round((double)TiltAngle / tilt_increment);
-	emit sendConsoleText(QString("Initializing position."));
-	QString consoleMessage = "PanWord: " + PanWord;
-	emit sendConsoleText(QString(consoleMessage));
-
-	//add PanWord to serial transmit packet
-	servocomm += to_string(PanWord);
-	servocomm += ",";
-	consoleMessage = "TiltWord: " + TiltWord;
-	emit sendConsoleText(consoleMessage);
-	//add TiltWord to serial transmit packet
-	servocomm += to_string(TiltWord);
-	servocomm += ",";
-	//add flags to serial transmit packet
-	servocomm += to_string(target_centered);
-	servocomm += ",";
-	servocomm += to_string(read_range);
-	servocomm += ",";
-	servocomm += to_string(fire);
-	servocomm += "\n";
-	//send packet to Arduino
-	for (int i = 0; i < servocomm.length(); i++) {
-		outdata[i] = servocomm[i];
-	}
-	send_success = SP->WriteData(outdata, servocomm.length());
-	if (send_success) emit sendConsoleText(QString("Commands successful"));
-	else emit sendConsoleText(QString("Commands failed"));
-	for (int i = 0; i < servocomm.length(); i++) {
-		outdata[i] = 0;
-	}
-	emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
-	servocomm = "";
+	PanWord = (int)round((double)InitPan / pan_increment);
+	TiltWord = (int)round((double)InitTilt / tilt_increment);
+	moveTurret();
 
 	time(&start_time);
 
@@ -577,36 +592,8 @@ void recognition::process()
 			PanWord = (int)round((double)PanAngle / pan_increment);
 			TiltWord = (int)round((double)TiltAngle / tilt_increment);
 			emit sendConsoleText(QString("Resetting position."));
-			QString consoleMessage = "PanWord: " + PanWord;
-			emit sendConsoleText(QString(consoleMessage));
-
-			//add PanWord to serial transmit packet
-			servocomm += to_string(PanWord);
-			servocomm += ",";
-			consoleMessage = "TiltWord: " + TiltWord;
-			emit sendConsoleText(consoleMessage);
-			//add TiltWord to serial transmit packet
-			servocomm += to_string(TiltWord);
-			servocomm += ",";
-			//add flags to serial transmit packet
-			servocomm += to_string(target_centered);
-			servocomm += ",";
-			servocomm += to_string(read_range);
-			servocomm += ",";
-			servocomm += to_string(fire);
-			servocomm += "\n";
-			//send packet to Arduino
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = servocomm[i];
-			}
-			send_success = SP->WriteData(outdata, servocomm.length());
-			if (send_success) emit sendConsoleText(QString("Commands successful"));
-			else emit sendConsoleText(QString("Commands failed"));
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = 0;
-			}
-			emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
-			servocomm = "";
+			
+			moveTurret();
 
 			//change reset flag back to false
 			resetSentry = false;
@@ -645,36 +632,7 @@ void recognition::process()
 			read_range = true;
 			emit sendCamStatus(QString("Compensating"));
 
-			//send new packet to Arduino
-			consoleMessage = "PanWord:" + PanWord;
-			emit sendConsoleText(consoleMessage);
-			servocomm += to_string(PanWord);
-			servocomm += ",";
-			consoleMessage = "TiltWord:" + TiltWord;
-			emit sendConsoleText(consoleMessage);
-			servocomm += to_string(TiltWord);
-			servocomm += ",";
-			//add flags to serial transmit packet
-			servocomm += to_string(target_centered);
-			servocomm += ",";
-			servocomm += to_string(read_range);
-			servocomm += ",";
-			servocomm += to_string(fire);
-			servocomm += "\n";
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = servocomm[i];
-			}
-
-			//send packet and check result
-			send_success = SP->WriteData(outdata, servocomm.length());
-			if (send_success) emit sendConsoleText(QString("Commands successful"));
-			else emit sendConsoleText(QString("Commands failed"));
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = 0;
-			}
-			consoleMessage = "servocomm: " + QString(servocomm.c_str());
-			emit sendConsoleText(consoleMessage);
-			servocomm = "";
+			moveTurret();
 
 			//Receive data from serial
 			for (reads = 0; reads < 1; reads++) {
@@ -710,36 +668,7 @@ void recognition::process()
 			//Fire!
 			fire = true;
 			emit sendCamStatus(QString("Firing!"));
-			//send new packet to Arduino
-			consoleMessage = "PanWord:" + PanWord;
-			emit sendConsoleText(consoleMessage);
-			servocomm += to_string(PanWord);
-			servocomm += ",";
-			consoleMessage = "TiltWord:" + TiltWord;
-			emit sendConsoleText(consoleMessage);
-			servocomm += to_string(TiltWord);
-			servocomm += ",";
-			//add flags to serial transmit packet
-			servocomm += to_string(target_centered);
-			servocomm += ",";
-			servocomm += to_string(read_range);
-			servocomm += ",";
-			servocomm += to_string(fire);
-			servocomm += "\n";
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = servocomm[i];
-			}
-
-			//send packet and check result
-			send_success = SP->WriteData(outdata, servocomm.length());
-			if (send_success) emit sendConsoleText(QString("Commands successful"));
-			else emit sendConsoleText(QString("Commands failed"));
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = 0;
-			}
-			consoleMessage = "servocomm: " + QString(servocomm.c_str());
-			emit sendConsoleText(consoleMessage);
-			servocomm = "";
+			moveTurret();
 			//reset flags so that it won't fire again
 			fire = false;
 			target_centered = false;
@@ -954,37 +883,8 @@ void recognition::process()
 				PanAngle = sector*SCANINCREMENT;
 				PanWord = PanAngle / pan_increment;
 			}
-
-			//assemble packet
-			consoleMessage = "PanWord:" + PanWord;
-			emit sendConsoleText(consoleMessage);
-			servocomm += to_string(PanWord);
-			servocomm += ",";
-			consoleMessage = "TiltWord:" + TiltWord;
-			emit sendConsoleText(consoleMessage);
-			servocomm += to_string(TiltWord);
-			servocomm += ",";
-			//add flags to serial transmit packet
-			servocomm += to_string(target_centered);
-			servocomm += ",";
-			servocomm += to_string(read_range);
-			servocomm += ",";
-			servocomm += to_string(fire);
-			servocomm += "\n";
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = servocomm[i];
-			}
-
-			//send packet and check result
-			send_success = SP->WriteData(outdata, servocomm.length());
-			if (send_success) emit sendConsoleText(QString("Commands successful"));
-			else emit sendConsoleText(QString("Commands failed"));
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = 0;
-			}
-			consoleMessage = "servocomm: " + QString(servocomm.c_str());
-			emit sendConsoleText(consoleMessage);
-			servocomm = "";
+			//send instructions to turret
+			moveTurret();
 
 			//if target was found, update angles
 			if (target_found == true)
@@ -1005,40 +905,8 @@ void recognition::process()
 	TiltWord = (int)round((double)InitTilt / tilt_increment);
 	cout << "Initializing position." << endl;
 	emit sendConsoleText(QString("Initializing position."));
-	consoleMessage = "PanWord: " + PanWord;
-	emit sendConsoleText(QString(consoleMessage));
+	moveTurret();
 
-	//add PanWord to serial transmit packet
-	servocomm += to_string(PanWord);
-	servocomm += ",";
-	consoleMessage = "TiltWord: " + TiltWord;
-	emit sendConsoleText(consoleMessage);
-	//add TiltWord to serial transmit packet
-	servocomm += to_string(TiltWord);
-	servocomm += ",";
-	//add flags to serial transmit packet
-	servocomm += to_string(target_centered);
-	servocomm += ",";
-	servocomm += to_string(read_range);
-	servocomm += ",";
-	servocomm += to_string(fire);
-	servocomm += "\n";
-	//send packet to Arduino
-	for (int i = 0; i < servocomm.length(); i++) {
-		outdata[i] = servocomm[i];
-	}
-	send_success = SP->WriteData(outdata, servocomm.length());
-	if (send_success) emit sendConsoleText(QString("Commands successful"));
-	else emit sendConsoleText(QString("Commands failed"));
-	for (int i = 0; i < servocomm.length(); i++) {
-		outdata[i] = 0;
-	}
-	emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
-	servocomm = "";
-	//release camera
-	capture.release();
-	//free serial port
-	SP->~Serial();
 	return;
 }
 

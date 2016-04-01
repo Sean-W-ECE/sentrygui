@@ -21,6 +21,7 @@ public:
 signals:
 	void targetInit();
 	void targetCalibrate();
+	void startManual();
 	void startProcess();
 	void endProcess();
 
@@ -35,13 +36,13 @@ private:
 	//item for scene
 	QGraphicsPixmapItem *mapItem;
 
+	//state of operation
+	//0 = setup/init, 1 = manual, 2 = auto
+	int state = 0;
+
 	//setup for thread
 	void setup();
-
-	//function to update the UI
-	int updateUI();
-	//send movement command to Arduino
-	int moveTurret();
+	
 
 public slots:
 	//receive Mat from thread
