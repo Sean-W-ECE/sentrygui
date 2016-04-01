@@ -46,7 +46,7 @@ public slots:
 	//receive Mat from thread
 	void receiveImage(QImage image);
 	//receive status messages about camera from recog
-	void updateCamStatus(int stat);
+	void updateCamStatus(QString text);
 	//receive console text and output to console pane
 	void printConsole(QString text);
 };

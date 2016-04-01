@@ -20,6 +20,7 @@
 #include <cctype>
 #include <iterator>
 #include "SerialClass.h"
+#include "compensator.h"
 #include "compData.h"
 
 class recognition : public QObject
@@ -39,11 +40,12 @@ private:
 	cv::Mat frame;
 	cv::Mat I2;
 	Serial *SP;
+	compensator *comp;
 
 signals:
 	//void done();
 	void sendImage(QImage image);
-	void sendCamStatus(int stat);
+	void sendCamStatus(QString text);
 	void sendConsoleText(QString text);
 	
 public slots:

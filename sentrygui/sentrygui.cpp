@@ -63,30 +63,8 @@ void sentrygui::printConsole(QString text)
 	ui.console->append(text);
 }
 
-void sentrygui::updateCamStatus(int stat)
+//update the status field
+void sentrygui::updateCamStatus(QString text)
 {
-	if (stat == -1)
-	{
-		ui.statusDisplay->setText("No Arduino connected");
-	}
-	if (stat == 0)
-	{
-		ui.statusDisplay->setText("No camera found");
-	}
-	if (stat == 1)
-	{
-		ui.statusDisplay->setText("Calibrating");
-	}
-	if (stat == 2)
-	{
-		ui.statusDisplay->setText("Scanning");
-	}
-	if (stat == 3)
-	{
-		ui.statusDisplay->setText("Ready!");
-	}
-	if (stat == 4)
-	{
-		ui.statusDisplay->setText("Arduino connected");
-	}
+	ui.statusDisplay->setText(text);
 }

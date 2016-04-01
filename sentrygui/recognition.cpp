@@ -4,7 +4,8 @@
 using namespace cv;
 using namespace std;
 
-#define SCANINCREMENT 15;
+#define SCANINCREMENT 15
+#define RFIND_BYTES 6
 
 char key;
 int thresh = 127;
@@ -33,6 +34,8 @@ bool haltProcess;
 // These will have to change depending on what the previous angle was set to.
 double PanAngle = 90.0;
 double TiltAngle = 90.0;
+//initial tilt angle used for resetting after successful shot
+double OldTilt = TiltAngle;
 
 unsigned int PanWord = 0;
 unsigned int TiltWord = 0;
@@ -65,14 +68,16 @@ enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
 recognition::recognition(QObject *parent)
 	: QObject(parent)
 {
-	//init serial to null
+	//init serial and compensator to null
 	SP = NULL;
+	comp = NULL;
 	haltProcess = false;
 }
 
 recognition::~recognition()
 {
 	capture.release();
+	comp->~compensator();
 }
 
 static double computeReprojectionErrors(
@@ -297,18 +302,22 @@ static bool runAndSave(const string& outputFilename,
 
 void recognition::process()
 {
+	//create and init compensator
+	comp = new compensator();
+	comp->init();
+	
 	//initializes serial connection
 	SP = new Serial(_T(L"COM4"));
 	while (!(SP->IsConnected()))
 	{
 		emit sendConsoleText(QString("No Arduino found. Searching..."));
-		emit sendCamStatus(-1);
+		emit sendCamStatus(QString("No Arduino Connected"));
 		Sleep(3000);
 	}
 	//when connected, alert and wait for 3 seconds
 	emit sendConsoleText(QString("Arduino connected"));
 	emit sendConsoleText(QString("Waiting for 3 seconds"));
-	emit sendCamStatus(4);
+	emit sendCamStatus(QString("Arduino Connected"));
 	Sleep(3000);
 
 	bool cameraOpened = false;
@@ -329,15 +338,13 @@ void recognition::process()
 		if (searchI == 0 && !cameraOpened)
 		{
 			emit sendConsoleText(QString("No camera found. Searching..."));
-			emit sendCamStatus(0);
+			emit sendCamStatus(QString("No camera found"));
 			Sleep(1000);
 		}
 	} while (!cameraOpened);
 	
 	const string outputFilename = "calibration.xml";
-	//CvCapture * capture = cvCaptureFromCAM(CV_CAP_ANY);
 	Size cb_size = Size(cornersV, cornersH);
-	//int numBoards =4;
 	int H, W, i, j;
 	int mode = DETECTION;
 	int delay = 10;
@@ -347,13 +354,9 @@ void recognition::process()
 	vector<vector<Point3f>> cb_points;
 	vector < vector<Point2f>> image_points;
 
-	//Mat intrinsic = Mat(3, 3, CV_32FC1);
-	//Mat distCoeffs;
 	vector<Mat> rvecs;
 	vector<Mat> tvecs;
 
-	//intrinsic.ptr<float>(0)[0] = 1;
-	//intrinsic.ptr<float>(1)[1] = 1;
 	double pixel_size = 1.34 / 1000;
 	double aperW = 1920 * pixel_size;
 	double aperH = 1080 * pixel_size;
@@ -369,11 +372,6 @@ void recognition::process()
 	capture >> frame;
 	H = frame.rows;
 	W = frame.cols;
-	//vector<Point3f> checkboard;
-	/*for (i = 0; i < numSquares; i++) {
-	checkboard.push_back(Point3f(i / cornersH, i % cornersH, 0.0f));
-	}
-	*/
 	Size imsize(frame.cols, frame.rows);
 	// First, check that a calibration xml exists.
 	bool loadfromxml = readXMLList(outputFilename, cameraMatrix, distCoeffs);
@@ -382,7 +380,7 @@ void recognition::process()
 	// If not, run calibration routine.
 	if (!loadfromxml) {
 		//tell UI cam is calibrating
-		emit sendCamStatus(1);
+		emit sendCamStatus(QString("Calibrating"));
 
 		int calibrationStarted = 0;
 		while (1) {
@@ -456,7 +454,7 @@ void recognition::process()
 			}
 			if (mode == CALIBRATED) {
 				emit sendConsoleText(QString("Camera successfully calibrated."));
-				emit sendCamStatus(3);
+				emit sendCamStatus(QString("Ready"));
 				Sleep(3000);
 				break;
 			}
@@ -487,6 +485,7 @@ void recognition::process()
 	vector<Point> found_points;
 	int counts = 0;
 
+	//Initialize position
 	PanWord = (int)round((double)PanAngle / pan_increment);
 	TiltWord = (int)round((double)TiltAngle / tilt_increment);
 	cout << "Initializing position." << endl;
@@ -525,7 +524,7 @@ void recognition::process()
 	time(&start_time);
 
 	//tell UI cam is entering scanning mode
-	emit sendCamStatus(2);
+	emit sendCamStatus(QString("Scanning"));
 
 	//main scanning function
 	while (!haltProcess) {
@@ -542,15 +541,85 @@ void recognition::process()
 
 		undistort(frame, frame_ud, cameraMatrix, distCoeffs);
 
-		if (target_centered) {
+		//if target aligned and not waiting for servo movement, compensate
+		if (target_centered && !begin_wait) {
 			// Run compensation module
 
+			//string for range data
+			string dist = "";
+			//char array for receiving data from serial
+			char distance[16];
+			int reads = 0;
+			//final value for distance (0 - 4000)
+			long unsigned int tar_dist = 0;
+			read_range = true;
+			emit sendCamStatus(QString("Compensating"));
+
+			//send new packet to Arduino
+			consoleMessage = "PanWord:" + PanWord;
+			emit sendConsoleText(consoleMessage);
+			servocomm += to_string(PanWord);
+			servocomm += ",";
+			consoleMessage = "TiltWord:" + TiltWord;
+			emit sendConsoleText(consoleMessage);
+			servocomm += to_string(TiltWord);
+			servocomm += ",";
+			//add flags to serial transmit packet
+			servocomm += to_string(target_centered);
+			servocomm += ",";
+			servocomm += to_string(read_range);
+			servocomm += ",";
+			servocomm += to_string(fire);
+			servocomm += "\n";
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = servocomm[i];
+			}
+
+			//send packet and check result
+			send_success = SP->WriteData(outdata, servocomm.length());
+			if (send_success) emit sendConsoleText(QString("Commands successful"));
+			else emit sendConsoleText(QString("Commands failed"));
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = 0;
+			}
+			consoleMessage = "servocomm: " + QString(servocomm.c_str());
+			emit sendConsoleText(consoleMessage);
+			servocomm = "";
+
+			//Receive data from serial
+			for (reads = 0; reads < 1; reads++) {
+				Sleep(100);
+
+				// Now Arduino will read the distance from the sensor
+				// and return it.
+				send_success = SP->ReadData(distance, RFIND_BYTES);
+				if (send_success) {
+					emit sendConsoleText(QString("Distance read successful!"));
+					int j = 0;
+					for (int i = 0; i < RFIND_BYTES; i++) {
+						if (distance[i] != '\n') {
+							dist += distance[i];
+							j++;
+						}
+					}
+				}
+				emit sendConsoleText(QString("Distance read not successful!"));
+				Sleep(700);
+
+				// Due to the issue mentioned above, the program will only
+				// keep the first value returned through serial.
+				if (reads == 0) {
+					tar_dist = stol(dist, nullptr, 10);
+					consoleMessage = "Distance taken: " + tar_dist;
+					emit sendConsoleText(consoleMessage);
+				}
+				dist = "";
+			}
 		}
 
 		// Convert screencap into HLS from RGB
 		cvtColor(frame_ud, I2, CV_BGR2HLS);
 		medianBlur(I2, I2, 5);
-		//imshow("HLS view", I2);
 		H = I2.rows;
 		W = I2.cols;
 		// Mark center on camera view
@@ -590,17 +659,6 @@ void recognition::process()
 		vector<vector<Point>>contours;
 		vector<Vec4i> hierarchy;
 
-
-		//Mat contours = I3.clone();
-		//medianBlur(I3, I3, 3);
-		//Canny(I3, I3, 1, 127, 3);
-		/*int erosion_size = 0;
-		Mat element = getStructuringElement(MORPH_RECT,
-		Size(2 * erosion_size + 1, 2 * erosion_size + 1),
-		Point(erosion_size, erosion_size));
-		erode(I3, I3, element);
-		*/
-
 		// Finds contours in the masked image
 		findContours(I3.clone(), contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
 
@@ -609,7 +667,6 @@ void recognition::process()
 		{
 			Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 			drawContours(frame, contours, i, color, 1, 8, hierarchy, 0, Point());
-			//drawContours(I3, contours, i, color, 1, 8, hierarchy, 0, Point());
 		}
 
 
@@ -627,16 +684,11 @@ void recognition::process()
 				if (contours[i].size()>9) {
 					momnts[i] = moments(contours[i], false);
 					if (momnts[i].m00 != 0) {
-						//cout << "z = " << z << " , m00 = " << momnts[i].m00 << endl;
-						//cout << "z = " << z << " , m10/m00 = " << momnts[i].m10/momnts[i].m00 << endl;
-						//cout << "z = " << z << " , m01/m00 = " << momnts[i].m01 / momnts[i].m00 << endl;
 						// Find image moments to calculate the x and y coordinates
 						// of the center.
 						float xin = momnts[i].m10 / momnts[i].m00;
 						float yin = momnts[i].m01 / momnts[i].m00;
 						center[z] = Point2f(xin, yin);
-						//center[z].x = momnts[i].m10 / momnts[i].m00;
-						//center[z].y = momnts[i].m01 / momnts[i].m00;
 						minEnclosingCircle(contours[i], center_circle[i], radii[z]);
 						z++;
 					}
@@ -650,7 +702,6 @@ void recognition::process()
 			// Now verify that the circles make up the bullseye
 			for (j = 0; j < z; j++) {
 				centerfin = center[j];
-				//cout << "center.x" << z << " = " << centerfin.x << ", center.y" << z << " = " << centerfin.y << endl;
 				count = 0;
 				if (centerfin.x > 0 && centerfin.y > 0) {
 					for (i = 0; i < z; i++) {
@@ -681,7 +732,7 @@ void recognition::process()
 				consoleMessage = QString("\rTarget found! Center at ( %1 , %2 )").arg(targetpoint.x,targetpoint.y);
 				emit sendConsoleText(consoleMessage);
 				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
-					consoleMessage = QString("Camera locked on target at %1 , %2! Initiating firing procedure!").arg(targetpoint.x, targetpoint.y);
+					consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
 					emit sendConsoleText(consoleMessage);
 					target_centered = true;
 				}
@@ -703,10 +754,7 @@ void recognition::process()
 				int baseLine = 0;
 				Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 				Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
-				//cout << "Set Pan Angle to : " << PanAngle << " , " << PanWord << endl;
-				//cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
 				putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
-				//target_found = true;
 
 				if (found_points.size()<3)
 					found_points.push_back(targetpoint);
@@ -730,13 +778,10 @@ void recognition::process()
 									//begin_wait = true;
 								}
 
-
 								string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
 								int baseLine = 0;
 								Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 								Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
-								//cout << "Set Pan Angle to : " << PanAngle << " , " << PanWord << endl;
-								//cout << "Set Tilt Angle to : " << TiltAngle << " , " << TiltWord << endl;
 								putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
 
 								target_found = true;
