@@ -36,6 +36,9 @@ double PanAngle = 90.0;
 double TiltAngle = 90.0;
 //initial tilt angle used for resetting after successful shot
 double OldTilt = TiltAngle;
+//initial tilt
+double InitTilt = TiltAngle;
+double InitPan = PanAngle;
 
 unsigned int PanWord = 0;
 unsigned int TiltWord = 0;
@@ -482,6 +485,8 @@ void recognition::process()
 	target_found = false;
 	target_centered = false;
 
+	int frameCount = 0;
+
 	vector<Point> found_points;
 	int counts = 0;
 
@@ -651,7 +656,9 @@ void recognition::process()
 			consoleMessage = "servocomm: " + QString(servocomm.c_str());
 			emit sendConsoleText(consoleMessage);
 			servocomm = "";
+			//reset flags so that it won't fire again
 			fire = false;
+			target_centered = false;
 			//user feedback not implemented yet, just wait for a second for now
 			Sleep(5000);
 		}
@@ -768,7 +775,7 @@ void recognition::process()
 				targetpoint.y = (int)centerfin.y;
 				circle(frame, targetpoint, 4, (0, 0, 255), -1);
 
-				consoleMessage = QString("\rTarget found! Center at ( %1 , %2 )").arg(targetpoint.x,targetpoint.y);
+				consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x,targetpoint.y);
 				emit sendConsoleText(consoleMessage);
 				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
 					consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
@@ -903,12 +910,45 @@ void recognition::process()
 			}
 			time(&start_time);
 			begin_wait = true;
-		}
-
-		consoleMessage = QString("Center at %1 , %2").arg(view_center.x, view_center.y);
-		emit sendConsoleText(consoleMessage);		
+		}	
 
 	}
+
+	//Reset position to initial before terminating
+	PanWord = (int)round((double)InitPan / pan_increment);
+	TiltWord = (int)round((double)InitTilt / tilt_increment);
+	cout << "Initializing position." << endl;
+	emit sendConsoleText(QString("Initializing position."));
+	consoleMessage = "PanWord: " + PanWord;
+	emit sendConsoleText(QString(consoleMessage));
+
+	//add PanWord to serial transmit packet
+	servocomm += to_string(PanWord);
+	servocomm += ",";
+	consoleMessage = "TiltWord: " + TiltWord;
+	emit sendConsoleText(consoleMessage);
+	//add TiltWord to serial transmit packet
+	servocomm += to_string(TiltWord);
+	servocomm += ",";
+	//add flags to serial transmit packet
+	servocomm += to_string(target_centered);
+	servocomm += ",";
+	servocomm += to_string(read_range);
+	servocomm += ",";
+	servocomm += to_string(fire);
+	servocomm += "\n";
+	//send packet to Arduino
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = servocomm[i];
+	}
+	send_success = SP->WriteData(outdata, servocomm.length());
+	if (send_success) emit sendConsoleText(QString("Commands successful"));
+	else emit sendConsoleText(QString("Commands failed"));
+	for (int i = 0; i < servocomm.length(); i++) {
+		outdata[i] = 0;
+	}
+	emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
+	servocomm = "";
 	//release camera
 	capture.release();
 	//free serial port
