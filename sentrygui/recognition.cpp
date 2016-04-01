@@ -15,7 +15,7 @@ RNG rng(12345);
 char outdata[64];
 string servocomm = "";
 
-bool calibrationStarted = false;
+int calibrationStarted = 0;
 bool target_found = false;
 bool target_centered = false;
 bool read_range = false;
@@ -439,10 +439,11 @@ void recognition::process()
 		emit sendImage(image);
 
 		//start calibration from button press
-		if (capture.isOpened() && calibrationStarted)
+		if (capture.isOpened() && calibrationStarted == 1)
 		{
 			mode = CAPTURING;
 			image_points.clear();
+			calibrationStarted = 0;
 		}
 
 		if (mode == CAPTURING && image_points.size() > nframes)
@@ -1022,7 +1023,8 @@ void recognition::process()
 
 void recognition::startCalibrate()
 {
-	calibrationStarted = true;
+	emit sendConsoleText(QString("Start calibration"));
+	calibrationStarted = 1;
 }
 
 void recognition::endCapture()
