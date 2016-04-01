@@ -85,9 +85,11 @@ recognition::recognition(QObject *parent)
 recognition::~recognition()
 {
 	capture.release();
-	comp->~compensator();
+	if (comp != NULL)
+		comp->~compensator();
 	//free serial port
-	SP->~Serial();
+	if (SP != NULL)
+		SP->~Serial();
 }
 
 static double computeReprojectionErrors(

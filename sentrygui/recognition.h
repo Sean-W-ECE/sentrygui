@@ -31,6 +31,8 @@ class recognition : public QObject
 public:
 	recognition(QObject *parent);
 	~recognition();
+	void init();
+	void calibrate();
 	/*static double computeReprojectionErrors(const vector<vector<Point3f> >& objectPoints,
 		const vector<vector<Point2f> >& imagePoints,
 		const vector<Mat>& rvecs, const vector<Mat>& tvecs,
@@ -60,8 +62,6 @@ signals:
 	
 public slots:
 	void startCalibrate();
-	void init();
-	void calibrate();
 	void manual();
 	void process();
 	void endCapture();

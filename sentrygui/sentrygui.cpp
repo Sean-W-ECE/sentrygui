@@ -41,6 +41,11 @@ void sentrygui::setup()
 	//connect calibrate button
 	connect(ui.calibrateButton, &QAbstractButton::released, recog, &recognition::startCalibrate);
 
+	//connection for initialization
+	connect(this, &sentrygui::targetInit, recog, &recognition::init);
+	//connection for calibration
+	connect(this, &sentrygui::targetCalibrate, recog, &recognition::calibrate);
+
 	//connect init flag
 	connect(recog, &recognition::sendInit, this, &sentrygui::getInitialized);
 	//connect calibrated flag
@@ -48,10 +53,6 @@ void sentrygui::setup()
 	//connect manual mode
 	connect(this, &sentrygui::startManual, recog, &recognition::manual);
 
-	//move recog object to thread and start
-	recog->moveToThread(thread);
-	thread->start();
-		
 	//create the Pixmap item
 	mapItem = new QGraphicsPixmapItem();
 	//set view in UI to scene
@@ -62,23 +63,12 @@ void sentrygui::setup()
 	
 	//initialize console
 	ui.console->setReadOnly(1);
-
+	//move recog object to thread and start
+	recog->moveToThread(thread);
+	thread->start();
 	//init the targeting module
 	emit targetInit();
-	//spin until initialized
-	while (!initialized)
-	{
-		QCoreApplication::processEvents(0);
-	}
-	//calibrate camera
-	emit targetCalibrate();
-	while (!calibrated)
-	{
-		QCoreApplication::processEvents(0);
-	}
-	//start scanning
-	emit startManual();
-	state = 1;
+	//Calibration and scan start done via signal chain
 }
 
 //receive image, convert to QImage, display to UI
@@ -99,14 +89,15 @@ void sentrygui::updateCamStatus(QString text)
 	ui.statusDisplay->setText(text);
 }
 
-//sets the initialized flag
+//once target initialized, emit signal to calibrate
 void sentrygui::getInitialized()
 {
-	initialized = true;
+	emit targetCalibrate();
 }
 
-//sets the calibrated flag
+//once calibrated, start idling
 void sentrygui::getCalibration()
 {
-	calibrated = true;
+	state = 1;
+	emit startManual();
 }
