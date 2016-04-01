@@ -545,6 +545,7 @@ void recognition::process()
 		if (target_centered && !begin_wait) {
 			// Run compensation module
 
+#if 0
 			//string for range data
 			string dist = "";
 			//char array for receiving data from serial
@@ -615,6 +616,44 @@ void recognition::process()
 				}
 				dist = "";
 			}
+#endif
+
+			//Fire!
+			fire = true;
+			emit sendCamStatus(QString("Firing!"));
+			//send new packet to Arduino
+			consoleMessage = "PanWord:" + PanWord;
+			emit sendConsoleText(consoleMessage);
+			servocomm += to_string(PanWord);
+			servocomm += ",";
+			consoleMessage = "TiltWord:" + TiltWord;
+			emit sendConsoleText(consoleMessage);
+			servocomm += to_string(TiltWord);
+			servocomm += ",";
+			//add flags to serial transmit packet
+			servocomm += to_string(target_centered);
+			servocomm += ",";
+			servocomm += to_string(read_range);
+			servocomm += ",";
+			servocomm += to_string(fire);
+			servocomm += "\n";
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = servocomm[i];
+			}
+
+			//send packet and check result
+			send_success = SP->WriteData(outdata, servocomm.length());
+			if (send_success) emit sendConsoleText(QString("Commands successful"));
+			else emit sendConsoleText(QString("Commands failed"));
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = 0;
+			}
+			consoleMessage = "servocomm: " + QString(servocomm.c_str());
+			emit sendConsoleText(consoleMessage);
+			servocomm = "";
+			fire = false;
+			//user feedback not implemented yet, just wait for a second for now
+			Sleep(5000);
 		}
 
 		// Convert screencap into HLS from RGB
