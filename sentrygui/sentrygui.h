@@ -19,7 +19,8 @@ public:
 	~sentrygui();
 
 signals:
-	void sendTurretAngles(double pan, double tilt);
+	void targetInit();
+	void targetCalibrate();
 	void startProcess();
 	void endProcess();
 

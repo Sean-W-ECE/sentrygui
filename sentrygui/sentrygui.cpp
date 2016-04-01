@@ -40,7 +40,11 @@ void sentrygui::setup()
 	//move recog object to thread and start
 	recog->moveToThread(thread);
 	thread->start();
-	//start the process
+	//init the targeting module
+	emit targetInit();
+	//calibrate camera
+	emit targetCalibrate();
+	//start scanning
 	emit startProcess();
 	
 	//create the Pixmap item

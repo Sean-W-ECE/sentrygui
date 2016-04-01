@@ -84,6 +84,8 @@ recognition::~recognition()
 {
 	capture.release();
 	comp->~compensator();
+	//free serial port
+	SP->~Serial();
 }
 
 static double computeReprojectionErrors(
@@ -306,12 +308,12 @@ static bool runAndSave(const string& outputFilename,
 	return ok;
 }
 
-void recognition::process()
+void recognition::init()
 {
 	//create and init compensator
 	comp = new compensator();
 	comp->init();
-	
+
 	//initializes serial connection
 	SP = new Serial(_T(L"COM4"));
 	while (!(SP->IsConnected()))
@@ -327,7 +329,7 @@ void recognition::process()
 	Sleep(3000);
 
 	bool cameraOpened = false;
-	
+
 	//repeatedly check if camera is connected and try to connect
 	//connect to highest-numbered camera in system
 	do
@@ -348,7 +350,12 @@ void recognition::process()
 			Sleep(1000);
 		}
 	} while (!cameraOpened);
-	
+}
+
+/*Performs calibration of the turret and camera*/
+void recognition::calibrate()
+{
+	/*Calibration Variables*/
 	const string outputFilename = "calibration.xml";
 	Size cb_size = Size(cornersV, cornersH);
 	int H, W, i, j;
@@ -356,38 +363,34 @@ void recognition::process()
 	int delay = 10;
 	clock_t prevTimestamp = 0;
 
-	Mat cameraMatrix, distCoeffs;
 	vector<vector<Point3f>> cb_points;
 	vector < vector<Point2f>> image_points;
 
 	vector<Mat> rvecs;
 	vector<Mat> tvecs;
 
+	double aspectRatio = 4 / 3;
 	double pixel_size = 1.34 / 1000;
 	double aperW = 1920 * pixel_size;
 	double aperH = 1080 * pixel_size;
-	double hfov, vfov;
 	double focalLength;
 	Point2d princiPoint;
-	double aspectRatio = 4 / 3;
 	double squareSize = 1.0;
 
 	int nframes = 6;
 	int flags = CALIB_FIX_ASPECT_RATIO;
 
+	//Get Frame from camera for dimension init
 	capture >> frame;
 	H = frame.rows;
 	W = frame.cols;
 	Size imsize(frame.cols, frame.rows);
-#if 0
-	// First, check that a calibration xml exists.
-	bool loadfromxml = readXMLList(outputFilename, cameraMatrix, distCoeffs);
-#endif
 
 	//run calibration routine.
 	//tell UI cam is calibrating
 	emit sendCamStatus(QString("Calibrating"));
 
+	//Main calibration loop
 	while (1) {
 		Mat gray_frame;
 		vector<Point2f> corners;
@@ -478,8 +481,10 @@ void recognition::process()
 
 	// Get FOV and a few other parameters using the new camera matrix
 	calibrationMatrixValues(cameraMatrix, imsize, aperH, aperW, hfov, vfov, focalLength, princiPoint, aspectRatio);
+}
 
-	/*=============================================================================================================*/
+void recognition::process()
+{
 
 	double NewTiltAngle = 0.0;
 	double NewPanAngle = 0.0;
@@ -597,6 +602,7 @@ void recognition::process()
 
 		Mat frame_ud;
 		Mat I2;
+		int H, W, i, j;
 		// Put camera capture into matrix object
 		capture >> frame;
 		if (frame.empty()) break;
