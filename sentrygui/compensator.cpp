@@ -3,7 +3,7 @@
 using namespace std;
 
 #define TILTSIZE 1024
-#define RANGESIZE 2048
+#define RANGESIZE 4001
 
 //file that data is read from / stored to
 fstream srcFile;
