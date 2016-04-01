@@ -49,6 +49,18 @@ void sentrygui::setup()
 	//move recog object to thread and start
 	recog->moveToThread(thread);
 	thread->start();
+		
+	//create the Pixmap item
+	mapItem = new QGraphicsPixmapItem();
+	//set view in UI to scene
+	ui.camView->setScene(&scene);
+	mapItem = new QGraphicsPixmapItem();
+	//add item to scene
+	scene.addItem(mapItem);
+	
+	//initialize console
+	ui.console->setReadOnly(1);
+
 	//init the targeting module
 	emit targetInit();
 	//spin until initialized
@@ -64,17 +76,6 @@ void sentrygui::setup()
 	}
 	//start scanning
 	emit startProcess();
-	
-	//create the Pixmap item
-	mapItem = new QGraphicsPixmapItem();
-	//set view in UI to scene
-	ui.camView->setScene(&scene);
-	mapItem = new QGraphicsPixmapItem();
-	//add item to scene
-	scene.addItem(mapItem);
-	
-	//initialize console
-	ui.console->setReadOnly(1);
 }
 
 //receive image, convert to QImage, display to UI
