@@ -46,6 +46,7 @@ public:
     QGraphicsView *camView;
     QTextEdit *console;
     QPushButton *resetButton;
+    QPushButton *calibrateButton;
 
     void setupUi(QWidget *sentryguiClass)
     {
@@ -219,7 +220,10 @@ public:
         console->setGeometry(QRect(710, 20, 411, 501));
         resetButton = new QPushButton(sentryguiClass);
         resetButton->setObjectName(QStringLiteral("resetButton"));
-        resetButton->setGeometry(QRect(50, 550, 81, 34));
+        resetButton->setGeometry(QRect(20, 530, 81, 34));
+        calibrateButton = new QPushButton(sentryguiClass);
+        calibrateButton->setObjectName(QStringLiteral("calibrateButton"));
+        calibrateButton->setGeometry(QRect(110, 530, 112, 34));
 
         retranslateUi(sentryguiClass);
 
@@ -238,6 +242,7 @@ public:
         modeLabel->setText(QApplication::translate("sentryguiClass", "Mode:", 0));
         modeDisplay->setText(QApplication::translate("sentryguiClass", "Auto", 0));
         resetButton->setText(QApplication::translate("sentryguiClass", "RESET", 0));
+        calibrateButton->setText(QApplication::translate("sentryguiClass", "CALIBRATE", 0));
     } // retranslateUi
 
 };

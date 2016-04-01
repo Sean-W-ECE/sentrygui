@@ -50,6 +50,7 @@ signals:
 	void sendConsoleText(QString text);
 	
 public slots:
+	void startCalibrate();
 	void process();
 	void endCapture();
 	void reset();

@@ -15,6 +15,7 @@ RNG rng(12345);
 char outdata[64];
 string servocomm = "";
 
+bool calibrationStarted = false;
 bool target_found = false;
 bool target_centered = false;
 bool read_range = false;
@@ -387,12 +388,14 @@ void recognition::process()
 	//tell UI cam is calibrating
 	emit sendCamStatus(QString("Calibrating"));
 
-	int calibrationStarted = 0;
 	while (1) {
 		Mat gray_frame;
 		vector<Point2f> corners;
 		bool blink = false;
+		//process all pending events
+		QCoreApplication::processEvents(0);
 
+		//get the frame
 		capture >> frame;
 
 		cvtColor(frame.clone(), gray_frame, CV_BGR2GRAY);
@@ -435,12 +438,11 @@ void recognition::process()
 		//send frame to UI
 		emit sendImage(image);
 
-		//start calibration automatically
-		if (capture.isOpened() && calibrationStarted == 0)
+		//start calibration from button press
+		if (capture.isOpened() && calibrationStarted)
 		{
 			mode = CAPTURING;
 			image_points.clear();
-			calibrationStarted = 1;
 		}
 
 		if (mode == CAPTURING && image_points.size() > nframes)
@@ -1016,6 +1018,11 @@ void recognition::process()
 	//free serial port
 	SP->~Serial();
 	return;
+}
+
+void recognition::startCalibrate()
+{
+	calibrationStarted = true;
 }
 
 void recognition::endCapture()
