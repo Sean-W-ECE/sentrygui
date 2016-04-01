@@ -308,6 +308,15 @@ static bool runAndSave(const string& outputFilename,
 	return ok;
 }
 
+void recognition::sendFrame(Mat& frame)
+{
+	//convert frame to QImage during calibration
+	QImage image(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888);
+	image = image.rgbSwapped();
+	//send frame to UI
+	emit sendImage(image);
+}
+
 void recognition::init()
 {
 	//create and init compensator
@@ -350,6 +359,9 @@ void recognition::init()
 			Sleep(1000);
 		}
 	} while (!cameraOpened);
+
+	//Alert GUI that init finished
+	emit sendInit();
 }
 
 /*Performs calibration of the turret and camera*/
@@ -435,11 +447,8 @@ void recognition::calibrate()
 		if (blink)
 			bitwise_not(frame, frame);
 
-		//convert frame to QImage during calibration
-		QImage image(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888);
-		image = image.rgbSwapped();
-		//send frame to UI
-		emit sendImage(image);
+		//send frame to display
+		sendFrame(frame);
 
 		//start calibration from button press
 		if (capture.isOpened() && calibrationStarted == 1)
@@ -466,7 +475,7 @@ void recognition::calibrate()
 		if (mode == CALIBRATED) {
 			emit sendConsoleText(QString("Camera successfully calibrated."));
 			emit sendCamStatus(QString("Ready"));
-			Sleep(3000);
+			//Sleep(3000);
 			break;
 		}
 
@@ -481,6 +490,15 @@ void recognition::calibrate()
 
 	// Get FOV and a few other parameters using the new camera matrix
 	calibrationMatrixValues(cameraMatrix, imsize, aperH, aperW, hfov, vfov, focalLength, princiPoint, aspectRatio);
+	//alert GUI that calibration complete
+	emit sendCalibrated();
+}
+
+void recognition::manual()
+{
+	capture >> frame;
+	sendFrame(frame);
+	QCoreApplication::processEvents(0);
 }
 
 void recognition::process()
@@ -922,11 +940,8 @@ void recognition::process()
 			
 		}
 
-		//convert frame to QImage
-		QImage image(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888);
-		image = image.rgbSwapped();
 		//send frame to UI
-		emit sendImage(image);
+		sendFrame(frame);
 
 		//servo control
 		if (SP->IsConnected() && begin_wait == false) {

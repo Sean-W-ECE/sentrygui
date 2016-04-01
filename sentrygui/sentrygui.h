@@ -50,6 +50,10 @@ public slots:
 	void updateCamStatus(QString text);
 	//receive console text and output to console pane
 	void printConsole(QString text);
+	//receive initialization condition
+	void getInitialized();
+	//receive calibrated status from targeting module
+	void getCalibration();
 };
 
 #endif // SENTRYGUI_H

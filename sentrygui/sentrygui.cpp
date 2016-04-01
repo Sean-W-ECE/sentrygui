@@ -3,6 +3,9 @@
 #include <iostream>
 #include <QGraphicsPixmapItem>
 
+bool initialized = false;
+bool calibrated = false;
+
 sentrygui::sentrygui(QWidget *parent)
 	: QWidget(parent)
 {
@@ -32,18 +35,33 @@ void sentrygui::setup()
 	connect(recog, &recognition::sendCamStatus, this, &sentrygui::updateCamStatus);
 	//attach console text writer
 	connect(recog, &recognition::sendConsoleText, this, &sentrygui::printConsole);
+
 	//connect reset button to recognition
 	connect(ui.resetButton, &QAbstractButton::released, recog, &recognition::reset);
 	//connect calibrate button
 	connect(ui.calibrateButton, &QAbstractButton::released, recog, &recognition::startCalibrate);
+
+	//connect init flag
+	connect(recog, &recognition::sendInit, this, &sentrygui::getInitialized);
+	//connect calibrated flag
+	connect(recog, &recognition::sendCalibrated, this, &sentrygui::getCalibration);
 
 	//move recog object to thread and start
 	recog->moveToThread(thread);
 	thread->start();
 	//init the targeting module
 	emit targetInit();
+	//spin until initialized
+	while (!initialized)
+	{
+		QCoreApplication::processEvents(0);
+	}
 	//calibrate camera
 	emit targetCalibrate();
+	while (!calibrated)
+	{
+		QCoreApplication::processEvents(0);
+	}
 	//start scanning
 	emit startProcess();
 	
@@ -75,4 +93,16 @@ void sentrygui::printConsole(QString text)
 void sentrygui::updateCamStatus(QString text)
 {
 	ui.statusDisplay->setText(text);
+}
+
+//sets the initialized flag
+void sentrygui::getInitialized()
+{
+	initialized = true;
+}
+
+//sets the calibrated flag
+void sentrygui::getCalibration()
+{
+	calibrated = true;
 }
