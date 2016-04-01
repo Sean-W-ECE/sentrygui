@@ -768,61 +768,25 @@ void recognition::process()
 		//send frame to UI
 		emit sendImage(image);
 
-		//servo control when no target found
-		if (target_found == false && SP->IsConnected() && begin_wait == false) {
-			if (PanAngle > 145.0 || PanAngle < 35.0)
-				inc = -1 * inc;
-			sector += inc;
-			PanAngle = sector*SCANINCREMENT;
-			//TiltAngle = (double)TiltWord*tilt_increment;
-			PanWord = PanAngle / pan_increment;
-			//TiltAngle = TiltAngle / tilt_increment;
-			//cout << "PanWord:";
-			//cout << PanWord << endl;
-			servocomm += to_string(PanWord);
-			servocomm += ",";
-			//cout << "TiltWord:";
-			//cout << TiltWord << endl;
-			servocomm += to_string(TiltWord);
-			servocomm += ",";
-			//add flags to serial transmit packet
-			servocomm += to_string(target_centered);
-			servocomm += ",";
-			servocomm += to_string(read_range);
-			servocomm += ",";
-			servocomm += to_string(fire);
-			servocomm += "\n";
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = servocomm[i];
+		//servo control
+		if (SP->IsConnected() && begin_wait == false) {
+			//if no target found, move to next sector
+			if (target_found == false)
+			{
+				if (PanAngle > 145.0 || PanAngle < 35.0)
+					inc = -1 * inc;
+				sector += inc;
+				PanAngle = sector*SCANINCREMENT;
+				PanWord = PanAngle / pan_increment;
 			}
-			send_success = SP->WriteData(outdata, servocomm.length());
-			if (send_success) emit sendConsoleText(QString("Commands successful"));
-			else emit sendConsoleText(QString("Commands failed"));
-			for (int i = 0; i < servocomm.length(); i++) {
-				outdata[i] = 0;
-			}
-			consoleMessage = "servocomm: " + QString(servocomm.c_str());
-			emit sendConsoleText(consoleMessage);
-			servocomm = "";
 
-
-			time(&start_time);
-			begin_wait = true;
-		}
-		//time(&end_time);
-
-		//servo control when target is found
-		if (target_found == true && SP->IsConnected() && begin_wait == false) {
-			cout << "PanWord:";
-			cout << PanWord << endl;
+			//assemble packet
 			consoleMessage = "PanWord:" + PanWord;
 			emit sendConsoleText(consoleMessage);
 			servocomm += to_string(PanWord);
 			servocomm += ",";
 			consoleMessage = "TiltWord:" + TiltWord;
 			emit sendConsoleText(consoleMessage);
-			cout << "TiltWord:";
-			cout << TiltWord << endl;
 			servocomm += to_string(TiltWord);
 			servocomm += ",";
 			//add flags to serial transmit packet
@@ -835,6 +799,8 @@ void recognition::process()
 			for (int i = 0; i < servocomm.length(); i++) {
 				outdata[i] = servocomm[i];
 			}
+
+			//send packet and check result
 			send_success = SP->WriteData(outdata, servocomm.length());
 			if (send_success) emit sendConsoleText(QString("Commands successful"));
 			else emit sendConsoleText(QString("Commands failed"));
@@ -845,8 +811,12 @@ void recognition::process()
 			emit sendConsoleText(consoleMessage);
 			servocomm = "";
 
-			PanAngle = (double)PanWord*pan_increment;
-			TiltAngle = (double)TiltWord*tilt_increment;
+			//if target was found, update angles
+			if (target_found == true)
+			{
+				PanAngle = (double)PanWord*pan_increment;
+				TiltAngle = (double)TiltWord*tilt_increment;
+			}
 			time(&start_time);
 			begin_wait = true;
 		}
