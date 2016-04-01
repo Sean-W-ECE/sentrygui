@@ -2,6 +2,7 @@
 #define RECOGNITION_H
 
 #include <QObject>
+#include <qcoreapplication.h>
 #include <qimage.h>
 #include <opencv2/core/core.hpp>
 #include "opencv2/imgproc/imgproc_c.h"
@@ -51,6 +52,7 @@ signals:
 public slots:
 	void process();
 	void endCapture();
+	void reset();
 };
 
 #endif // RECOGNITION_H

@@ -352,7 +352,7 @@
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>Manual</string>
+       <string>Auto</string>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -379,6 +379,19 @@
      <width>411</width>
      <height>501</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="resetButton">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>550</y>
+     <width>81</width>
+     <height>34</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>RESET</string>
    </property>
   </widget>
  </widget>

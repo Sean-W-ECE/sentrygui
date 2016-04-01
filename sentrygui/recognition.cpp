@@ -30,6 +30,8 @@ double thetapPxH, thetapPxW;
 VideoCapture capture;
 //used to kill main loop when quitting
 bool haltProcess;
+//reset turret position
+bool resetSentry;
 
 // These will have to change depending on what the previous angle was set to.
 double PanAngle = 90.0;
@@ -376,93 +378,92 @@ void recognition::process()
 	H = frame.rows;
 	W = frame.cols;
 	Size imsize(frame.cols, frame.rows);
+#if 0
 	// First, check that a calibration xml exists.
 	bool loadfromxml = readXMLList(outputFilename, cameraMatrix, distCoeffs);
-	cout << "Loaded from xml : " << loadfromxml << endl;
+#endif
 
-	// If not, run calibration routine.
-	if (!loadfromxml) {
-		//tell UI cam is calibrating
-		emit sendCamStatus(QString("Calibrating"));
+	//run calibration routine.
+	//tell UI cam is calibrating
+	emit sendCamStatus(QString("Calibrating"));
 
-		int calibrationStarted = 0;
-		while (1) {
-			Mat gray_frame;
-			vector<Point2f> corners;
-			bool blink = false;
+	int calibrationStarted = 0;
+	while (1) {
+		Mat gray_frame;
+		vector<Point2f> corners;
+		bool blink = false;
 
-			capture >> frame;
+		capture >> frame;
 
-			cvtColor(frame.clone(), gray_frame, CV_BGR2GRAY);
-			bool found = findChessboardCorners(frame.clone(), cb_size, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
-			if (found) {
-				cornerSubPix(gray_frame, corners, Size(11, 11), Size(-1, -1), TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.1));
-			}
-
-			if (mode == CAPTURING && found &&
-				(!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC))
-			{
-				image_points.push_back(corners);
-				prevTimestamp = clock();
-				blink = capture.isOpened();
-			}
-
-			if (found)
-				drawChessboardCorners(frame, cb_size, Mat(corners), found);
-
-			string msg = mode == CAPTURING ? "100/100" :
-				mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";
-			int baseLine = 0;
-			Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
-			Point textOrigin(frame.cols - 2 * textSize.width - 10, frame.rows - 2 * baseLine - 10);
-
-			if (mode == CAPTURING)
-			{
-				msg = format("%d/%d", (int)image_points.size(), nframes);
-			}
-
-			putText(frame, msg, textOrigin, 1, 1,
-				mode != CALIBRATED ? Scalar(0, 0, 255) : Scalar(0, 255, 0));
-
-			if (blink)
-				bitwise_not(frame, frame);
-
-			//convert frame to QImage during calibration
-			QImage image(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888);
-			image = image.rgbSwapped();
-			//send frame to UI
-			emit sendImage(image);
-
-			//start calibration automatically
-			if (capture.isOpened() && calibrationStarted == 0)
-			{
-				mode = CAPTURING;
-				image_points.clear();
-				calibrationStarted = 1;
-			}
-
-			if (mode == CAPTURING && image_points.size() > nframes)
-			{
-
-				if (runAndSave(outputFilename, image_points, imsize,
-					cb_size, squareSize, aspectRatio,
-					flags, cameraMatrix, distCoeffs,
-					true, true))
-					//if (ok)
-					mode = CALIBRATED;
-				else
-					mode = DETECTION;
-				if (!capture.isOpened())
-					break;
-			}
-			if (mode == CALIBRATED) {
-				emit sendConsoleText(QString("Camera successfully calibrated."));
-				emit sendCamStatus(QString("Ready"));
-				Sleep(3000);
-				break;
-			}
-
+		cvtColor(frame.clone(), gray_frame, CV_BGR2GRAY);
+		bool found = findChessboardCorners(frame.clone(), cb_size, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
+		if (found) {
+			cornerSubPix(gray_frame, corners, Size(11, 11), Size(-1, -1), TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.1));
 		}
+
+		if (mode == CAPTURING && found &&
+			(!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC))
+		{
+			image_points.push_back(corners);
+			prevTimestamp = clock();
+			blink = capture.isOpened();
+		}
+
+		if (found)
+			drawChessboardCorners(frame, cb_size, Mat(corners), found);
+
+		string msg = mode == CAPTURING ? "100/100" :
+			mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";
+		int baseLine = 0;
+		Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
+		Point textOrigin(frame.cols - 2 * textSize.width - 10, frame.rows - 2 * baseLine - 10);
+
+		if (mode == CAPTURING)
+		{
+			msg = format("%d/%d", (int)image_points.size(), nframes);
+		}
+
+		putText(frame, msg, textOrigin, 1, 1,
+			mode != CALIBRATED ? Scalar(0, 0, 255) : Scalar(0, 255, 0));
+
+		if (blink)
+			bitwise_not(frame, frame);
+
+		//convert frame to QImage during calibration
+		QImage image(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888);
+		image = image.rgbSwapped();
+		//send frame to UI
+		emit sendImage(image);
+
+		//start calibration automatically
+		if (capture.isOpened() && calibrationStarted == 0)
+		{
+			mode = CAPTURING;
+			image_points.clear();
+			calibrationStarted = 1;
+		}
+
+		if (mode == CAPTURING && image_points.size() > nframes)
+		{
+
+			if (runAndSave(outputFilename, image_points, imsize,
+				cb_size, squareSize, aspectRatio,
+				flags, cameraMatrix, distCoeffs,
+				true, true))
+				//if (ok)
+				mode = CALIBRATED;
+			else
+				mode = DETECTION;
+			if (!capture.isOpened())
+				break;
+		}
+		if (mode == CALIBRATED) {
+			emit sendConsoleText(QString("Camera successfully calibrated."));
+			emit sendCamStatus(QString("Ready"));
+			Sleep(3000);
+			break;
+		}
+
 	}
 	emit sendConsoleText(QString("Camera calibrated and calibration information saved."));
 	string msg = "Camera calibrated and calibration information saved.";
@@ -493,7 +494,6 @@ void recognition::process()
 	//Initialize position
 	PanWord = (int)round((double)PanAngle / pan_increment);
 	TiltWord = (int)round((double)TiltAngle / tilt_increment);
-	cout << "Initializing position." << endl;
 	emit sendConsoleText(QString("Initializing position."));
 	QString consoleMessage = "PanWord: " + PanWord;
 	emit sendConsoleText(QString(consoleMessage));
@@ -533,6 +533,60 @@ void recognition::process()
 
 	//main scanning function
 	while (!haltProcess) {
+
+		//Reset procedure
+		if (resetSentry)
+		{
+			//reset variables to initial
+			PanAngle = InitPan;
+			TiltAngle = InitTilt;
+			inc = 1;
+			sector = 6;
+			fire = false;
+			target_centered = false;
+			target_found = false;
+			read_range = false;
+
+			//reset sentry position
+			PanWord = (int)round((double)PanAngle / pan_increment);
+			TiltWord = (int)round((double)TiltAngle / tilt_increment);
+			emit sendConsoleText(QString("Resetting position."));
+			QString consoleMessage = "PanWord: " + PanWord;
+			emit sendConsoleText(QString(consoleMessage));
+
+			//add PanWord to serial transmit packet
+			servocomm += to_string(PanWord);
+			servocomm += ",";
+			consoleMessage = "TiltWord: " + TiltWord;
+			emit sendConsoleText(consoleMessage);
+			//add TiltWord to serial transmit packet
+			servocomm += to_string(TiltWord);
+			servocomm += ",";
+			//add flags to serial transmit packet
+			servocomm += to_string(target_centered);
+			servocomm += ",";
+			servocomm += to_string(read_range);
+			servocomm += ",";
+			servocomm += to_string(fire);
+			servocomm += "\n";
+			//send packet to Arduino
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = servocomm[i];
+			}
+			send_success = SP->WriteData(outdata, servocomm.length());
+			if (send_success) emit sendConsoleText(QString("Commands successful"));
+			else emit sendConsoleText(QString("Commands failed"));
+			for (int i = 0; i < servocomm.length(); i++) {
+				outdata[i] = 0;
+			}
+			emit sendConsoleText(QString("servocomm: ") + QString(servocomm.c_str()));
+			servocomm = "";
+
+			//change reset flag back to false
+			resetSentry = false;
+			//wait 6 seconds for reset to happen
+			Sleep(6000);
+		}
 		time(&end_time);
 		//controls how long to wait between panning the camera while scanning
 		if (end_time - start_time > 3)
@@ -912,6 +966,8 @@ void recognition::process()
 			begin_wait = true;
 		}	
 
+		//process events
+		QCoreApplication::processEvents(0);
 	}
 
 	//Reset position to initial before terminating
@@ -959,4 +1015,10 @@ void recognition::process()
 void recognition::endCapture()
 {
 	haltProcess = true;
+}
+
+void recognition::reset()
+{
+	emit sendConsoleText(QString("resetting!"));
+	resetSentry = true;
 }

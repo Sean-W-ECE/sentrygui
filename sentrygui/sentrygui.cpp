@@ -32,6 +32,8 @@ void sentrygui::setup()
 	connect(recog, &recognition::sendCamStatus, this, &sentrygui::updateCamStatus);
 	//attach console text writer
 	connect(recog, &recognition::sendConsoleText, this, &sentrygui::printConsole);
+	//connect reset button to recognition
+	connect(ui.resetButton, &QAbstractButton::released, recog, &recognition::reset);
 
 	//move recog object to thread and start
 	recog->moveToThread(thread);

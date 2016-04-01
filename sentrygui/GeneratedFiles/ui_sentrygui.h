@@ -18,6 +18,7 @@
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QTextEdit>
 #include <QtWidgets/QWidget>
 
@@ -44,6 +45,7 @@ public:
     QLineEdit *modeDisplay;
     QGraphicsView *camView;
     QTextEdit *console;
+    QPushButton *resetButton;
 
     void setupUi(QWidget *sentryguiClass)
     {
@@ -215,6 +217,9 @@ public:
         console = new QTextEdit(sentryguiClass);
         console->setObjectName(QStringLiteral("console"));
         console->setGeometry(QRect(710, 20, 411, 501));
+        resetButton = new QPushButton(sentryguiClass);
+        resetButton->setObjectName(QStringLiteral("resetButton"));
+        resetButton->setGeometry(QRect(50, 550, 81, 34));
 
         retranslateUi(sentryguiClass);
 
@@ -231,7 +236,8 @@ public:
         statusLabel->setText(QApplication::translate("sentryguiClass", "Status:", 0));
         statusDisplay->setText(QApplication::translate("sentryguiClass", "Initializing", 0));
         modeLabel->setText(QApplication::translate("sentryguiClass", "Mode:", 0));
-        modeDisplay->setText(QApplication::translate("sentryguiClass", "Manual", 0));
+        modeDisplay->setText(QApplication::translate("sentryguiClass", "Auto", 0));
+        resetButton->setText(QApplication::translate("sentryguiClass", "RESET", 0));
     } // retranslateUi
 
 };
