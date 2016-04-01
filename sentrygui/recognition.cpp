@@ -597,6 +597,9 @@ void recognition::process()
 		// Put camera capture into matrix object
 		capture >> frame;
 		if (frame.empty()) break;
+		//increment frameCount
+		if (frameCount < 30) frameCount++;
+		else frameCount = 0;
 
 		undistort(frame, frame_ud, cameraMatrix, distCoeffs);
 
@@ -829,11 +832,14 @@ void recognition::process()
 				targetpoint.y = (int)centerfin.y;
 				circle(frame, targetpoint, 4, (0, 0, 255), -1);
 
-				consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x,targetpoint.y);
-				emit sendConsoleText(consoleMessage);
+				if (frameCount == 30)
+				{
+					consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x, targetpoint.y);
+					emit sendConsoleText(consoleMessage);
+				}
 				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
 					consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
-					emit sendConsoleText(consoleMessage);
+					if(frameCount == 30) emit sendConsoleText(consoleMessage);
 					target_centered = true;
 				}
 				else target_centered = false;
