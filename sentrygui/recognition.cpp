@@ -4,7 +4,7 @@
 using namespace cv;
 using namespace std;
 
-#define SCANINCREMENT 15
+#define SCANINCREMENT 30
 #define RFIND_BYTES 6
 
 char key;
@@ -59,7 +59,7 @@ Point target_confirmed_points;
 double pan_increment = (double)180.0 / 1023.0;
 double tilt_increment = (double)180.0 / 1023.0;
 
-int sector = 6;
+int sector = 3;
 
 time_t start_time;
 time_t end_time;
@@ -526,7 +526,7 @@ void recognition::moveTurret()
 	servocomm += ",";
 
 	//add flags to serial transmit packet
-	servocomm += to_string(target_centered);
+	servocomm += to_string(target_found);
 	servocomm += ",";
 	servocomm += to_string(read_range);
 	servocomm += ",";

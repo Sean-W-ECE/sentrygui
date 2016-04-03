@@ -98,6 +98,6 @@ void sentrygui::getInitialized()
 //once calibrated, start idling
 void sentrygui::getCalibration()
 {
-	state = 1;
-	emit startManual();
+	state = 2;
+	emit startProcess();
 }
