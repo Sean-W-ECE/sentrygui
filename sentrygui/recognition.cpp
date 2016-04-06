@@ -674,6 +674,7 @@ void recognition::process()
 			//reset flags so that it won't fire again
 			fire = false;
 			target_centered = false;
+			target_found = false;
 			//user feedback not implemented yet, just wait for a second for now
 			Sleep(5000);
 		}
