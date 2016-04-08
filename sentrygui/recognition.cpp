@@ -45,6 +45,9 @@ double OldTilt = TiltAngle;
 double InitTilt = TiltAngle;
 double InitPan = PanAngle;
 
+//firing tolerance: how close camera has to be to target before gun fires
+int firingTolerance = 5;
+
 unsigned int PanWord = 0;
 unsigned int TiltWord = 0;
 
@@ -784,8 +787,8 @@ void recognition::process()
 					if (found) break;
 				}
 			}
-			// If target was found, mark it on frame and say where it was found.
-			if (found) {
+			// If target was found and not waiting, mark it on frame and say where it was found.
+			if (found && !begin_wait) {
 				Point targetpoint;
 				targetpoint.x = (int)centerfin.x;
 				targetpoint.y = (int)centerfin.y;
@@ -796,7 +799,7 @@ void recognition::process()
 					consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x, targetpoint.y);
 					emit sendConsoleText(consoleMessage);
 				}
-				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
+				if (abs(targetpoint.x - view_center.x) < firingTolerance && abs(targetpoint.y - view_center.y) < firingTolerance) {
 					consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
 					if(frameCount == 30) emit sendConsoleText(consoleMessage);
 					target_centered = true;
@@ -834,14 +837,12 @@ void recognition::process()
 								target_confirmed_points = found_points[i];
 								NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
 								NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
-								if (!begin_wait) {
-									NewPanAngle = (PanAngle + NewPanDelta);
-									PanWord = (int)round((double)NewPanAngle / pan_increment);
-									NewTiltAngle = (TiltAngle + NewTiltDelta);
-									TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-									time(&start_time);
-									//begin_wait = true;
-								}
+								NewPanAngle = (PanAngle + NewPanDelta);
+								PanWord = (int)round((double)NewPanAngle / pan_increment);
+								NewTiltAngle = (TiltAngle + NewTiltDelta);
+								TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+								time(&start_time);
+								//begin_wait = true;
 
 								string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
 								int baseLine = 0;
@@ -864,6 +865,7 @@ void recognition::process()
 			// Otherwise, say no target was found
 			else {
 				target_found = false;
+				found_points.clear();
 			}
 		}
 		// If no green contours detected, say nothing found.
