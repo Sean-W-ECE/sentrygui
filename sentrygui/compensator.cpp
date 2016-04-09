@@ -7,6 +7,8 @@ using namespace std;
 
 //file that data is read from / stored to
 fstream srcFile;
+//filename for compensation matrix data
+string filename = "compensation.txt";
 
 compensator::compensator()
 {
@@ -37,7 +39,7 @@ compensator::~compensator()
 	init()
 
 	Initialization routine
-	Loads or creates compensation matrix
+	Loads from file or creates compensation matrix
 */
 void compensator::init()
 {
@@ -45,34 +47,96 @@ void compensator::init()
 	if (compensation == NULL)
 	{
 		//allocate the matrix
-		compensation = new int*[TILTSIZE];
+		compensation = new float*[TILTSIZE];
 		for (int i = 0; i < TILTSIZE; i++)
 		{
-			compensation[i] = new int[RANGESIZE];
+			compensation[i] = new float[RANGESIZE];
 		}
 		
 		//try to read from file to fill matrix
-		srcFile.open("compensation.txt");
+		srcFile.open(filename);
 		if (srcFile.is_open())
 		{
 			string line;
+			int i = 0; //row iterator (tilt)
+			float tempStore;
+
 			while (getline(srcFile, line))
 			{
-				//TODO: parse line
+				int j = 0; //column iterator (range)
+				string::size_type sz = 0; //size_t
+				//if i exceeds # of rows, break
+				if (i > (TILTSIZE - 1))
+					break;
+				//convert values in the string to floats
+				do
+				{
+					//if j exceeds # fo columns, break
+					if (j > (RANGESIZE - 1))
+						break;
+					//parse first float appearing in string, save position after end of float
+					tempStore = stof(line.substr(sz), &sz);
+					compensation[i][j] = tempStore;
+					j++; //next column
+				} while (line[sz] != '\n');
+				i++; //next line
 			}
 		}
-		//file not found, init matrix to 0
+		//file not found, init matrix to NAN
 		else
 		{
 			for (int i = 0; i < TILTSIZE; i++)
 			{
 				for (int j = 0; j < RANGESIZE; j++)
 				{
-					compensation[i][j] = 0;
+					compensation[i][j] = NAN;
 				}
 			}
 		}
 	}
+}
+
+/*
+	int writeback()
+
+	Writes the compensation table back to file
+
+	Return values:
+	0 - success
+	1 - file not opened beforehand
+	2 - file write failure
+*/
+int compensator::writeback()
+{
+	int row = 0;
+	int col = 0;
+	string out = "";
+
+	//file opened check
+	if (srcFile.is_open())
+	{
+		//move put position to beginning of file
+		srcFile.seekp(0);
+
+		//print each row as a line, space delimited
+		for (row = 0; row < TILTSIZE; row++)
+		{
+			//for each row, convert floats to string, then append to out
+			for (col = 0; col < (RANGESIZE - 1); col++)
+			{
+				out += to_string(compensation[row][col]) + " ";
+			}
+			//append last column with newline
+			out += to_string(compensation[row][col]) + "\n";
+			//write string to file
+			srcFile << out;
+		}
+	}
+	else
+		return 1;
+
+	//successful return
+	return 0;
 }
 
 /*

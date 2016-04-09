@@ -16,11 +16,12 @@ public:
 	compensator();
 	~compensator();
 	void init();
+	int writeback();
 	compData compensate(unsigned int TiltWord, unsigned int Range);
 
 private:
 	//matrix of base compensation values.
 	//Stored values are modifiers on input values
 	//will be [tilt][distance]
-	int** compensation;
+	float** compensation;
 };
