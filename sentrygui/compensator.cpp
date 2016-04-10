@@ -54,7 +54,7 @@ void compensator::init()
 		}
 		
 		//try to read from file to fill matrix
-		srcFile.open(filename);
+		srcFile.open(filename, fstream::in);
 		if (srcFile.is_open())
 		{
 			string line;
@@ -65,6 +65,7 @@ void compensator::init()
 			{
 				int j = 0; //column iterator (range)
 				string::size_type sz = 0; //size_t
+				string::size_type sz2 = sz; //duplicate
 				//if i exceeds # of rows, break
 				if (i > (TILTSIZE - 1))
 					break;
@@ -75,12 +76,24 @@ void compensator::init()
 					if (j > (RANGESIZE - 1))
 						break;
 					//parse first float appearing in string, save position after end of float
-					tempStore = stof(line.substr(sz), &sz);
-					compensation[i][j] = tempStore;
+					try
+					{
+						tempStore = stof(line.substr(sz2), &sz);
+						compensation[i][j] = tempStore;
+					}
+					catch (const invalid_argument& ia)
+					{
+						//if an invalid argument exception arises, fill in matrix with NAN
+						compensation[i][j] = NAN;
+					}
+					sz2 = sz; //update to compute substring
 					j++; //next column
 				} while (line[sz] != '\n');
 				i++; //next line
 			}
+
+			//close file when done reading
+			srcFile.close();
 		}
 		//file not found, init matrix to NAN
 		else
@@ -108,8 +121,8 @@ void compensator::init()
 */
 int compensator::writeback()
 {
-	int row = 0;
-	int col = 0;
+	int row;
+	int col;
 	string out = "";
 
 	//file opened check
@@ -117,23 +130,30 @@ int compensator::writeback()
 	{
 		//move put position to beginning of file
 		srcFile.seekp(0);
-
-		//print each row as a line, space delimited
-		for (row = 0; row < TILTSIZE; row++)
-		{
-			//for each row, convert floats to string, then append to out
-			for (col = 0; col < (RANGESIZE - 1); col++)
-			{
-				out += to_string(compensation[row][col]) + " ";
-			}
-			//append last column with newline
-			out += to_string(compensation[row][col]) + "\n";
-			//write string to file
-			srcFile << out;
-		}
 	}
 	else
-		return 1;
+	{
+		//if not open, open it
+		srcFile.open(filename, fstream::out);
+	}
+
+	//print each row as a line, space delimited
+	for (row = 0; row < TILTSIZE; row++)
+	{
+		//for each row, convert floats to string, then append to out
+		//NANs are converted to string "nan" rather than any other form
+		for (col = 0; col < (RANGESIZE - 1); col++)
+		{
+			out += (isnan(compensation[row][col]) ? "NAN" : to_string(compensation[row][col])) + " ";
+		}
+		//append last column with newline
+		out += (isnan(compensation[row][col]) ? "NAN" : to_string(compensation[row][col])) + "\n";
+	}
+	//write string to file
+	srcFile << out;
+
+	//close file
+	srcFile.close();
 
 	//successful return
 	return 0;
