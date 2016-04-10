@@ -3,7 +3,7 @@
 using namespace std;
 
 #define TILTSIZE 1024
-#define RANGESIZE 4001
+#define RANGESIZE 801
 
 //file that data is read from / stored to
 fstream srcFile;
@@ -148,17 +148,29 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 {
 	//create return object
 	compData retVal = compData();
+
+	//round range to nearest 5
+	int roundRange = (Range % 5 < 3) ? (Range / 5) : (Range / 5 + 1);
+
 	//error checking
 	if (TiltWord > (TILTSIZE - 1) || Range > (RANGESIZE - 1))
 	{
 		//status = 1 means input error
-		retVal.Tilt = 0;
+		retVal.Tilt = 512; //return to neutral
 		retVal.status = 1;
 	}
 	else
 	{
 		//if not in error, look up modifier in table
-		int mod = compensation[TiltWord][Range];
+		float rawVal = compensation[TiltWord][roundRange];
+		//modifier to be added to tilt
+		int mod;
+		//check for NAN
+		if (isnan(rawVal))
+			mod = 0;
+		else
+			mod = (int)rawVal;
+
 		//if mod is positive or 0, add to TiltWord, but bound to TILTSIZE
 		if (mod >= 0)
 		{
