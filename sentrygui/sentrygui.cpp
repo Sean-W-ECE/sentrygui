@@ -50,8 +50,6 @@ void sentrygui::setup()
 	connect(recog, &recognition::sendInit, this, &sentrygui::getInitialized);
 	//connect calibrated flag
 	connect(recog, &recognition::sendCalibrated, this, &sentrygui::getCalibration);
-	//connect manual mode
-	connect(this, &sentrygui::startManual, recog, &recognition::manual);
 
 	//create the Pixmap item
 	mapItem = new QGraphicsPixmapItem();
