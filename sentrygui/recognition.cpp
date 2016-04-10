@@ -504,17 +504,7 @@ void recognition::calibrate()
 	emit sendCalibrated();
 }
 
-void recognition::manual()
-{
-	while (haltProcess == false)
-	{
-		capture >> frame;
-		sendFrame(frame);
-		QCoreApplication::processEvents(0);
-	}
-	haltProcess = false;
-}
-
+//Builds the serial packet and sends it to Arduino
 void recognition::moveTurret()
 {
 	bool send_success;
@@ -562,6 +552,7 @@ void recognition::process()
 	int inc = 1;
 	bool send_success;
 	bool begin_wait = false;
+	int wait_time = 3; //default wait 3 seconds between movements
 	target_found = false;
 	target_centered = false;
 
@@ -606,11 +597,14 @@ void recognition::process()
 			//change reset flag back to false
 			resetSentry = false;
 			//wait 6 seconds for reset to happen
-			Sleep(6000);
+			wait_time = 6;
+			time(&start_time);
+			begin_wait = true;
 		}
+
 		time(&end_time);
 		//controls how long to wait between panning the camera while scanning
-		if (end_time - start_time > 3)
+		if (end_time - start_time > wait_time)
 			begin_wait = false;
 
 		Mat frame_ud;
@@ -682,7 +676,9 @@ void recognition::process()
 			target_centered = false;
 			target_found = false;
 			//user feedback not implemented yet, just wait for a second for now
-			Sleep(5000);
+			wait_time = 5;
+			time(&start_time);
+			begin_wait = true;
 		}
 
 		// Convert screencap into HLS from RGB
@@ -844,7 +840,7 @@ void recognition::process()
 								PanWord = (int)round((double)NewPanAngle / pan_increment);
 								NewTiltAngle = (TiltAngle + NewTiltDelta);
 								TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-								time(&start_time);
+								//time(&start_time);
 								//begin_wait = true;
 
 								string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
@@ -900,6 +896,7 @@ void recognition::process()
 				PanAngle = (double)PanWord*pan_increment;
 				TiltAngle = (double)TiltWord*tilt_increment;
 			}
+			wait_time = 3; //resets wait time to 3 seconds
 			time(&start_time);
 			begin_wait = true;
 		}	

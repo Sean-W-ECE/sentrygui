@@ -62,7 +62,6 @@ signals:
 	
 public slots:
 	void startCalibrate();
-	void manual();
 	void process();
 	void endCapture();
 	void reset();
