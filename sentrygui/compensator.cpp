@@ -159,6 +159,71 @@ int compensator::writeback()
 	return 0;
 }
 
+// Performs nearest neighbor interpolation along X and Y axes (bilinear) to
+// estimate a value for an uninitialized compensation angle
+int compensator::interpolate(int TiltWord, int roundrange)
+{
+	int nearest[4];
+	int i = -1;
+	// Find nearest neighbor to the left
+	nearest[0] = TiltWord;
+	while (TiltWord + i >= 0) {
+		if (!isnan(compensation[TiltWord + i][roundrange])) {
+			nearest[0] = TiltWord + i;
+			break;
+		}
+		i--;
+	}
+	i = 1;
+	// Find nearest neighbor to the right
+	nearest[1] = TiltWord;
+	while (TiltWord + i < TILTSIZE) {
+		if (!isnan(compensation[TiltWord + i][roundrange])) {
+			nearest[1] = TiltWord + i;
+			break;
+		}
+		i++;
+	}
+	i = -1;
+	// Find nearest neighbor to the bottom
+	nearest[2] = roundrange;
+	while (roundrange + i >= 0) {
+		if (!isnan(compensation[TiltWord][roundrange + i])) {
+			nearest[2] = roundrange + i;
+			break;
+		}
+		i--;
+	}
+	i = 1;
+	// Find nearest neighbor to the top
+	nearest[3] = roundrange;
+	while (roundrange + i < RANGESIZE) {
+		if (!isnan(compensation[TiltWord][roundrange + i])) {
+			nearest[3] = roundrange + i;
+			break;
+		}
+		i++;
+	}
+	// Calculate distance weighted average
+	int num = 0;
+	int denum = 0;
+	for (i = 0; i < 2; i++) {
+		if (nearest[i] != TiltWord) {
+			num += (int)compensation[nearest[i]][roundrange] / abs(TiltWord - nearest[i]);
+			denum += 1 / abs(TiltWord - nearest[i]);
+		}
+	}
+	for (i = 2; i < 4; i++) {
+		if (nearest[i] != roundrange) {
+			num += (int)compensation[TiltWord][nearest[i]] / abs(roundrange - nearest[i]);
+			denum += 1 / abs(roundrange - nearest[i]);
+		}
+	}
+	int mod = (int)num / denum;
+	return mod;
+}
+
+
 /*
 	compensate(unsigned int TiltWord, unsigned int Range)
 
@@ -169,7 +234,7 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 	//create return object
 	compData retVal = compData();
 
-	//round range to nearest 5
+	//round range to nearest 5, use as index into matrix
 	int roundRange = (Range % 5 < 3) ? (Range / 5) : (Range / 5 + 1);
 
 	//error checking
@@ -187,7 +252,7 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 		int mod;
 		//check for NAN
 		if (isnan(rawVal))
-			mod = 0;
+			mod = interpolate(TiltWord, roundRange);
 		else
 			mod = (int)rawVal;
 

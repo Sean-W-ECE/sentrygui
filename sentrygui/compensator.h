@@ -24,4 +24,5 @@ private:
 	//Stored values are modifiers on input values
 	//will be [tilt][distance]
 	float** compensation;
+	int interpolate(int TiltWord, int roundrange);
 };
