@@ -652,13 +652,24 @@ void recognition::process()
 						}
 					}
 				}
-				emit sendConsoleText(QString("Distance read not successful!"));
+				else
+					emit sendConsoleText(QString("Distance read not successful!"));
 				Sleep(700);
 
 				// Due to the issue mentioned above, the program will only
 				// keep the first value returned through serial.
 				if (reads == 0) {
-					tar_dist = stoi(dist, nullptr, 10);
+					emit sendConsoleText(QString("Target distance:"));
+					emit sendConsoleText(QString::fromStdString(dist));
+					try
+					{
+						tar_dist = stoi(dist, nullptr, 10);
+					}
+					catch (const invalid_argument& ia)
+					{
+						emit sendConsoleText(QString("Error: invalid argument for distance"));
+						tar_dist = 0;
+					}
 					consoleMessage = "Distance taken: " + tar_dist;
 					emit sendConsoleText(consoleMessage);
 				}
