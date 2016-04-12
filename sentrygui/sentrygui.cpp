@@ -16,6 +16,8 @@ sentrygui::sentrygui(QWidget *parent)
 
 sentrygui::~sentrygui()
 {
+	//stop targeting
+	emit endProcess();
 	//terminate thread
 	thread->exit();
 }
@@ -28,8 +30,7 @@ void sentrygui::setup()
 	recognition* recog = new recognition(NULL);
 	//connect basics
 	connect(thread, &QThread::finished, recog, &QObject::deleteLater);
-	connect(this, &sentrygui::startProcess, recog, &recognition::process);
-	connect(this, &sentrygui::switchCapture, recog, &recognition::toggleCapture);
+	connect(this, &sentrygui::endProcess, recog, &recognition::endProcess);
 	//link mat to qimage converter
 	connect(recog, &recognition::sendImage, this, &sentrygui::receiveImage);
 	//attach cam status updater
@@ -48,6 +49,9 @@ void sentrygui::setup()
 	connect(this, &sentrygui::targetInit, recog, &recognition::init);
 	//connection for calibration
 	connect(this, &sentrygui::targetCalibrate, recog, &recognition::calibrate);
+	//connection for starting/stopping autoprocess
+	connect(this, &sentrygui::startProcess, recog, &recognition::process);
+	connect(this, &sentrygui::switchCapture, recog, &recognition::toggleCapture);
 
 	//connect init flag
 	connect(recog, &recognition::sendInit, this, &sentrygui::getInitialized);

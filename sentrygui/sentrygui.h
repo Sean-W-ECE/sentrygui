@@ -22,6 +22,7 @@ signals:
 	void targetInit();
 	void targetCalibrate();
 	void startProcess();
+	void endProcess();
 	void switchCapture(bool on);
 
 private:
