@@ -21,9 +21,8 @@ public:
 signals:
 	void targetInit();
 	void targetCalibrate();
-	void startManual();
 	void startProcess();
-	void endProcess();
+	void switchCapture(bool on);
 
 private:
 	Ui::sentryguiClass ui;
@@ -55,6 +54,8 @@ public slots:
 	void getInitialized();
 	//receive calibrated status from targeting module
 	void getCalibration();
+	//handler for STOP/START button
+	void stopstart();
 };
 
 #endif // SENTRYGUI_H

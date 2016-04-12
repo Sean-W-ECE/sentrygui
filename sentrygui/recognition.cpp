@@ -21,6 +21,7 @@ bool target_found = false;
 bool target_centered = false;
 bool read_range = false;
 bool fire = false;
+bool AUTOTURRET = false;
 QString consoleMessage;
 
 int cornersH = 6;
@@ -37,8 +38,8 @@ bool haltProcess;
 bool resetSentry;
 
 // These will have to change depending on what the previous angle was set to.
-double PanAngle = 90.0;
-double TiltAngle = 90.0;
+volatile double PanAngle = 90.0;
+volatile double TiltAngle = 90.0;
 //initial tilt angle used for resetting after successful shot
 double OldTilt = TiltAngle;
 //initial tilt
@@ -48,8 +49,8 @@ double InitPan = PanAngle;
 //firing tolerance: how close camera has to be to target before gun fires
 int firingTolerance = 6;
 
-unsigned int PanWord = 0;
-unsigned int TiltWord = 0;
+volatile unsigned int PanWord = 0;
+volatile unsigned int TiltWord = 0;
 
 double NewPanDelta = 0;
 double NewTiltDelta = 0;
@@ -570,6 +571,7 @@ void recognition::process()
 
 	//tell UI cam is entering scanning mode
 	emit sendCamStatus(QString("Scanning"));
+	AUTOTURRET = true;
 
 	//main scanning function
 	while (!haltProcess) {
@@ -619,310 +621,313 @@ void recognition::process()
 
 		undistort(frame, frame_ud, cameraMatrix, distCoeffs);
 
-		//if target aligned and not waiting for servo movement, compensate
-		if (target_centered && !begin_wait) {
-			// Run compensation module
-
-			//string for range data
-			string dist = "";
-			//char array for receiving data from serial
-			char distance[16];
-			int reads = 0;
-			//final value for distance (0 - 4000)
-			unsigned int tar_dist = 0;
-			read_range = true;
-			emit sendCamStatus(QString("Compensating"));
-
-			moveTurret();
-
-			//Receive data from serial
-			for (reads = 0; reads < 1; reads++) {
-				Sleep(1000);
-
-				// Now Arduino will read the distance from the sensor
-				// and return it.
-				send_success = SP->ReadData(distance, RFIND_BYTES);
-				if (send_success) {
-					emit sendConsoleText(QString("Distance read successful!"));
-					int j = 0;
-					for (int i = 0; i < RFIND_BYTES; i++) {
-						if (distance[i] != '\n') {
-							dist += distance[i];
-							j++;
-						}
-					}
-				}
-				else
-					emit sendConsoleText(QString("Distance read not successful!"));
-				Sleep(700);
-
-				// Due to the issue mentioned above, the program will only
-				// keep the first value returned through serial.
-				if (reads == 0) {
-					emit sendConsoleText(QString("Target distance:"));
-					emit sendConsoleText(QString::fromStdString(dist));
-					try
-					{
-						tar_dist = stol(dist, NULL, 10);
-					}
-					catch (const invalid_argument& ia)
-					{
-						emit sendConsoleText(QString("Error: invalid argument for distance"));
-						tar_dist = 0;
-					}
-					catch (const out_of_range& ora)
-					{
-						emit sendConsoleText(QString("Error: invalid argument for distance"));
-						tar_dist = 0;
-					}
-					consoleMessage = "Distance taken: " + tar_dist;
-					emit sendConsoleText(consoleMessage);
-				}
-				dist = "";
-			}
-
-			//get new tilt from compensation
-			compData tilting = comp->compensate(TiltWord, tar_dist);
-			if (tilting.status == 0)
-			{
-				TiltWord = tilting.Tilt;
-			}
-
-			//Fire!
-			fire = true;
-			emit sendCamStatus(QString("Firing!"));
-			moveTurret();
-			//reset flags so that it won't fire again
-			fire = false;
-			target_centered = false;
-			target_found = false;
-			//user feedback not implemented yet, just wait for a second for now
-			wait_time = 5;
-			time(&start_time);
-			begin_wait = true;
-		}
-
-		// Convert screencap into HLS from RGB
-		cvtColor(frame_ud, I2, CV_BGR2HLS);
-		medianBlur(I2, I2, 5);
-		H = I2.rows;
-		W = I2.cols;
-		// Mark center on camera view
-		view_center.x = round(W / 2);
-		view_center.y = round(H / 2);
-		circle(frame, view_center, 4, (255, 0, 0), -1);
-		Mat I3(H, W, CV_8UC1);
-
-		thetapPxH = vfov / H;
-		thetapPxW = hfov / W;
-
-		// Mask out any non-green objects in the frame and
-		// return a thresholded image
-		// Hue = [0:180]
-		// Lightness = [0:255]
-		// Saturation = [0:255]
-
-		// Green hues located between 60 and 90
-		for (i = 0; i < H; i++) {
-			for (j = 0; j < W; j++) {
-				Vec3b hls = I2.at<Vec3b>(i, j);
-				uchar hue = hls.val[0];
-				uchar light = hls.val[1];
-				uchar satu = hls.val[2];
-				//I2.at<uchar>((i*W + j) * 3 + 0)
-				if (hue < 50 || hue > 90
-					|| light < 25 || light > 200
-					|| satu < 30 || satu > 220)
-				{
-					I3.at<uchar>(i, j) = 0;
-				}
-				else
-					I3.at<uchar>(i, j) = 255;
-			}
-		}
-
-		vector<vector<Point>>contours;
-		vector<Vec4i> hierarchy;
-
-		// Finds contours in the masked image
-		findContours(I3.clone(), contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-
-		// Draw contours on the frame
-		for (i = 0; i< contours.size(); i++)
+		/* Automatic targeting and firing portion */
+		if (AUTOTURRET)
 		{
-			Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-			drawContours(frame, contours, i, color, 1, 8, hierarchy, 0, Point());
-		}
+			//if target aligned and not waiting for servo movement, compensate
+			if (target_centered && !begin_wait) {
+				// Run compensation module
 
+				//string for range data
+				string dist = "";
+				//char array for receiving data from serial
+				char distance[16];
+				int reads = 0;
+				//final value for distance (0 - 4000)
+				unsigned int tar_dist = 0;
+				read_range = true;
+				emit sendCamStatus(QString("Compensating"));
 
-		vector<Moments> momnts(contours.size());
-		vector<Point2f> center(contours.size());
-		vector<Point2f> center_circle(contours.size());
-		vector<float>radii(contours.size());
-		int num_contours = contours.size();
-		// Now search for circles in the image and find their centers
-		if (!contours.empty()) {
-			int z = 0;
-			for (i = 0; i < num_contours; i++) {
-				// If the number of vertices in the contour exceeds 9, you
-				// can safely assume that is a circle.
-				if (contours[i].size()>9) {
-					momnts[i] = moments(contours[i], false);
-					if (momnts[i].m00 != 0) {
-						// Find image moments to calculate the x and y coordinates
-						// of the center.
-						float xin = momnts[i].m10 / momnts[i].m00;
-						float yin = momnts[i].m01 / momnts[i].m00;
-						center[z] = Point2f(xin, yin);
-						minEnclosingCircle(contours[i], center_circle[i], radii[z]);
-						z++;
+				moveTurret();
+
+				//Receive data from serial
+				for (reads = 0; reads < 1; reads++) {
+					Sleep(1000);
+
+					// Now Arduino will read the distance from the sensor
+					// and return it.
+					send_success = SP->ReadData(distance, RFIND_BYTES);
+					if (send_success) {
+						emit sendConsoleText(QString("Distance read successful!"));
+						int j = 0;
+						for (int i = 0; i < RFIND_BYTES; i++) {
+							if (distance[i] != '\n') {
+								dist += distance[i];
+								j++;
+							}
+						}
 					}
-				}
-			}
+					else
+						emit sendConsoleText(QString("Distance read not successful!"));
+					Sleep(700);
 
-			Point centerfin;
-			bool found = false;
-			int count;
-			vector<float>radius_target(z);
-			// Now verify that the circles make up the bullseye
-			for (j = 0; j < z; j++) {
-				centerfin = center[j];
-				count = 0;
-				if (centerfin.x > 0 && centerfin.y > 0) {
-					for (i = 0; i < z; i++) {
-						// If the centers are within 2% of each other,
-						// assume they are the same point
-						if (abs((center[i].x - centerfin.x) / centerfin.x) < 0.02 &&
-							abs((center[i].y - centerfin.y) / centerfin.y) < 0.02)
+					// Due to the issue mentioned above, the program will only
+					// keep the first value returned through serial.
+					if (reads == 0) {
+						emit sendConsoleText(QString("Target distance:"));
+						emit sendConsoleText(QString::fromStdString(dist));
+						try
 						{
-							radius_target[count] = radii[i];
-							count++;
+							tar_dist = stol(dist, NULL, 10);
 						}
-						// If found circles exceeds 3, assume target found.
-						if (count > 4) {
-							found = true;
-							break;
+						catch (const invalid_argument& ia)
+						{
+							emit sendConsoleText(QString("Error: invalid argument for distance"));
+							tar_dist = 0;
 						}
+						catch (const out_of_range& ora)
+						{
+							emit sendConsoleText(QString("Error: invalid argument for distance"));
+							tar_dist = 0;
+						}
+						consoleMessage = "Distance taken: " + tar_dist;
+						emit sendConsoleText(consoleMessage);
 					}
-					if (found) break;
+					dist = "";
+				}
+
+				//get new tilt from compensation
+				compData tilting = comp->compensate(TiltWord, tar_dist);
+				if (tilting.status == 0)
+				{
+					TiltWord = tilting.Tilt;
+				}
+
+				//Fire!
+				fire = true;
+				emit sendCamStatus(QString("Firing!"));
+				moveTurret();
+				//reset flags so that it won't fire again
+				fire = false;
+				target_centered = false;
+				target_found = false;
+				//user feedback not implemented yet, just wait for a second for now
+				wait_time = 5;
+				time(&start_time);
+				begin_wait = true;
+			}
+
+			// Convert screencap into HLS from RGB
+			cvtColor(frame_ud, I2, CV_BGR2HLS);
+			medianBlur(I2, I2, 5);
+			H = I2.rows;
+			W = I2.cols;
+			// Mark center on camera view
+			view_center.x = round(W / 2);
+			view_center.y = round(H / 2);
+			circle(frame, view_center, 4, (255, 0, 0), -1);
+			Mat I3(H, W, CV_8UC1);
+
+			thetapPxH = vfov / H;
+			thetapPxW = hfov / W;
+
+			// Mask out any non-green objects in the frame and
+			// return a thresholded image
+			// Hue = [0:180]
+			// Lightness = [0:255]
+			// Saturation = [0:255]
+
+			// Green hues located between 60 and 90
+			for (i = 0; i < H; i++) {
+				for (j = 0; j < W; j++) {
+					Vec3b hls = I2.at<Vec3b>(i, j);
+					uchar hue = hls.val[0];
+					uchar light = hls.val[1];
+					uchar satu = hls.val[2];
+					//I2.at<uchar>((i*W + j) * 3 + 0)
+					if (hue < 50 || hue > 90
+						|| light < 25 || light > 200
+						|| satu < 30 || satu > 220)
+					{
+						I3.at<uchar>(i, j) = 0;
+					}
+					else
+						I3.at<uchar>(i, j) = 255;
 				}
 			}
-			// If target was found and not waiting, mark it on frame and say where it was found.
-			if (found) {
-				Point targetpoint;
-				targetpoint.x = (int)centerfin.x;
-				targetpoint.y = (int)centerfin.y;
-				circle(frame, targetpoint, 4, (0, 0, 255), -1);
 
-				if (frameCount == 30)
-				{
-					consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x, targetpoint.y);
-					emit sendConsoleText(consoleMessage);
+			vector<vector<Point>>contours;
+			vector<Vec4i> hierarchy;
+
+			// Finds contours in the masked image
+			findContours(I3.clone(), contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+
+			// Draw contours on the frame
+			for (i = 0; i< contours.size(); i++)
+			{
+				Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+				drawContours(frame, contours, i, color, 1, 8, hierarchy, 0, Point());
+			}
+
+
+			vector<Moments> momnts(contours.size());
+			vector<Point2f> center(contours.size());
+			vector<Point2f> center_circle(contours.size());
+			vector<float>radii(contours.size());
+			int num_contours = contours.size();
+			// Now search for circles in the image and find their centers
+			if (!contours.empty()) {
+				int z = 0;
+				for (i = 0; i < num_contours; i++) {
+					// If the number of vertices in the contour exceeds 9, you
+					// can safely assume that is a circle.
+					if (contours[i].size()>9) {
+						momnts[i] = moments(contours[i], false);
+						if (momnts[i].m00 != 0) {
+							// Find image moments to calculate the x and y coordinates
+							// of the center.
+							float xin = momnts[i].m10 / momnts[i].m00;
+							float yin = momnts[i].m01 / momnts[i].m00;
+							center[z] = Point2f(xin, yin);
+							minEnclosingCircle(contours[i], center_circle[i], radii[z]);
+							z++;
+						}
+					}
 				}
-				if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
-					consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
-					if (frameCount == 30) emit sendConsoleText(consoleMessage);
-					target_centered = true;
-				}
-				else target_centered = false;
 
-				//target_confirmed_points = targetpoint;
-				NewPanDelta = thetapPxW*round(view_center.x - targetpoint.x);
-				NewTiltDelta = thetapPxH*round(view_center.y - targetpoint.y);
-				if (!begin_wait) {
-					NewPanAngle = (PanAngle + NewPanDelta);
-					PanWord = (int)round((double)NewPanAngle / pan_increment);
-					NewTiltAngle = (TiltAngle + NewTiltDelta);
-					TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-
-					//begin_wait = true;
-				}
-
-				string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
-				int baseLine = 0;
-				Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
-				Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
-				putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
-
-				if (found_points.size()<3)
-					found_points.push_back(targetpoint);
-				else {
-
-					for (i = 0; i < found_points.size(); i++) {
-						for (j = 0; i < found_points.size(); i++) {
-							if (abs(found_points[i].x - found_points[j].x) < 3 &&
-								abs(found_points[i].y - found_points[j].y) < 3)
-								counts++;
-							if (counts >= 2) {
-								target_confirmed_points = found_points[i];
-								NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
-								NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
-								if (!begin_wait) {
-									NewPanAngle = (PanAngle + NewPanDelta);
-									PanWord = (int)round((double)NewPanAngle / pan_increment);
-									NewTiltAngle = (TiltAngle + NewTiltDelta);
-									TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-									time(&start_time);
-									//begin_wait = true;
-								}
-
-								string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
-								int baseLine = 0;
-								Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
-								Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
-								putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
-
-								target_found = true;
+				Point centerfin;
+				bool found = false;
+				int count;
+				vector<float>radius_target(z);
+				// Now verify that the circles make up the bullseye
+				for (j = 0; j < z; j++) {
+					centerfin = center[j];
+					count = 0;
+					if (centerfin.x > 0 && centerfin.y > 0) {
+						for (i = 0; i < z; i++) {
+							// If the centers are within 2% of each other,
+							// assume they are the same point
+							if (abs((center[i].x - centerfin.x) / centerfin.x) < 0.02 &&
+								abs((center[i].y - centerfin.y) / centerfin.y) < 0.02)
+							{
+								radius_target[count] = radii[i];
+								count++;
+							}
+							// If found circles exceeds 3, assume target found.
+							if (count > 4) {
+								found = true;
 								break;
 							}
 						}
-						if (counts >= 3) {
-							found_points.clear();
-							counts = 0;
-							break;
+						if (found) break;
+					}
+				}
+				// If target was found and not waiting, mark it on frame and say where it was found.
+				if (found) {
+					Point targetpoint;
+					targetpoint.x = (int)centerfin.x;
+					targetpoint.y = (int)centerfin.y;
+					circle(frame, targetpoint, 4, (0, 0, 255), -1);
+
+					if (frameCount == 30)
+					{
+						consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x, targetpoint.y);
+						emit sendConsoleText(consoleMessage);
+					}
+					if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
+						consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
+						if (frameCount == 30) emit sendConsoleText(consoleMessage);
+						target_centered = true;
+					}
+					else target_centered = false;
+
+					//target_confirmed_points = targetpoint;
+					NewPanDelta = thetapPxW*round(view_center.x - targetpoint.x);
+					NewTiltDelta = thetapPxH*round(view_center.y - targetpoint.y);
+					if (!begin_wait) {
+						NewPanAngle = (PanAngle + NewPanDelta);
+						PanWord = (int)round((double)NewPanAngle / pan_increment);
+						NewTiltAngle = (TiltAngle + NewTiltDelta);
+						TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+
+						//begin_wait = true;
+					}
+
+					string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
+					int baseLine = 0;
+					Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
+					Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
+					putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
+
+					if (found_points.size()<3)
+						found_points.push_back(targetpoint);
+					else {
+
+						for (i = 0; i < found_points.size(); i++) {
+							for (j = 0; i < found_points.size(); i++) {
+								if (abs(found_points[i].x - found_points[j].x) < 3 &&
+									abs(found_points[i].y - found_points[j].y) < 3)
+									counts++;
+								if (counts >= 2) {
+									target_confirmed_points = found_points[i];
+									NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
+									NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
+									if (!begin_wait) {
+										NewPanAngle = (PanAngle + NewPanDelta);
+										PanWord = (int)round((double)NewPanAngle / pan_increment);
+										NewTiltAngle = (TiltAngle + NewTiltDelta);
+										TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+										time(&start_time);
+										//begin_wait = true;
+									}
+
+									string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
+									int baseLine = 0;
+									Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
+									Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
+									putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
+
+									target_found = true;
+									break;
+								}
+							}
+							if (counts >= 3) {
+								found_points.clear();
+								counts = 0;
+								break;
+							}
 						}
 					}
 				}
+				// Otherwise, say no target was found
+				else {
+					target_found = false;
+				}
 			}
-			// Otherwise, say no target was found
+			// If no green contours detected, say nothing found.
 			else {
-				target_found = false;
+				emit sendConsoleText(QString("No green objects detected. Target not found..."));
+
+			}
+
+			//servo control
+			if (SP->IsConnected() && begin_wait == false) {
+				//if no target found, move to next sector
+				if (target_found == false)
+				{
+					if (PanAngle > 145.0 || PanAngle < 35.0)
+						inc = -1 * inc;
+					sector += inc;
+					PanAngle = sector*SCANINCREMENT;
+					PanWord = PanAngle / pan_increment;
+				}
+				//send instructions to turret
+				moveTurret();
+
+				//if target was found, update angles
+				if (target_found == true)
+				{
+					PanAngle = (double)PanWord*pan_increment;
+					TiltAngle = (double)TiltWord*tilt_increment;
+				}
+				wait_time = 3; //resets wait time to 3 seconds
+				time(&start_time);
+				begin_wait = true;
 			}
 		}
-		// If no green contours detected, say nothing found.
-		else {
-			emit sendConsoleText(QString("No green objects detected. Target not found..."));
-
-		}
-
 
 		//send frame to UI
 		sendFrame(frame);
-
-		//servo control
-		if (SP->IsConnected() && begin_wait == false) {
-			//if no target found, move to next sector
-			if (target_found == false)
-			{
-				if (PanAngle > 145.0 || PanAngle < 35.0)
-					inc = -1 * inc;
-				sector += inc;
-				PanAngle = sector*SCANINCREMENT;
-				PanWord = PanAngle / pan_increment;
-			}
-			//send instructions to turret
-			moveTurret();
-
-			//if target was found, update angles
-			if (target_found == true)
-			{
-				PanAngle = (double)PanWord*pan_increment;
-				TiltAngle = (double)TiltWord*tilt_increment;
-			}
-			wait_time = 3; //resets wait time to 3 seconds
-			time(&start_time);
-			begin_wait = true;
-		}	
 
 		//process events
 		QCoreApplication::processEvents(0);
@@ -944,7 +949,17 @@ void recognition::startCalibrate()
 	calibrationStarted = 1;
 }
 
-void recognition::endCapture()
+//sets AUTOTURRET to equal on state
+void recognition::toggleCapture(bool on)
+{
+	if (on)
+		AUTOTURRET = true;
+	else
+		AUTOTURRET = false;
+}
+
+//terminates the process function
+void recognition::endProcess()
 {
 	haltProcess = true;
 }

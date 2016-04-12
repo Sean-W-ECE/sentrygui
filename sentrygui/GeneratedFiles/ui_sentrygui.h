@@ -47,6 +47,7 @@ public:
     QTextEdit *console;
     QPushButton *resetButton;
     QPushButton *calibrateButton;
+    QPushButton *stopButton;
 
     void setupUi(QWidget *sentryguiClass)
     {
@@ -224,6 +225,9 @@ public:
         calibrateButton = new QPushButton(sentryguiClass);
         calibrateButton->setObjectName(QStringLiteral("calibrateButton"));
         calibrateButton->setGeometry(QRect(110, 530, 112, 34));
+        stopButton = new QPushButton(sentryguiClass);
+        stopButton->setObjectName(QStringLiteral("stopButton"));
+        stopButton->setGeometry(QRect(240, 530, 112, 34));
 
         retranslateUi(sentryguiClass);
 
@@ -243,6 +247,7 @@ public:
         modeDisplay->setText(QApplication::translate("sentryguiClass", "Auto", 0));
         resetButton->setText(QApplication::translate("sentryguiClass", "RESET", 0));
         calibrateButton->setText(QApplication::translate("sentryguiClass", "CALIBRATE", 0));
+        stopButton->setText(QApplication::translate("sentryguiClass", "STOP", 0));
     } // retranslateUi
 
 };

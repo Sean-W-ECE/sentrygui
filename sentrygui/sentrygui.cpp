@@ -5,6 +5,7 @@
 
 bool initialized = false;
 bool calibrated = false;
+bool capturing = false;
 
 sentrygui::sentrygui(QWidget *parent)
 	: QWidget(parent)
@@ -28,7 +29,7 @@ void sentrygui::setup()
 	//connect basics
 	connect(thread, &QThread::finished, recog, &QObject::deleteLater);
 	connect(this, &sentrygui::startProcess, recog, &recognition::process);
-	connect(this, &sentrygui::endProcess, recog, &recognition::endCapture);
+	connect(this, &sentrygui::switchCapture, recog, &recognition::toggleCapture);
 	//link mat to qimage converter
 	connect(recog, &recognition::sendImage, this, &sentrygui::receiveImage);
 	//attach cam status updater
@@ -40,6 +41,8 @@ void sentrygui::setup()
 	connect(ui.resetButton, &QAbstractButton::released, recog, &recognition::reset);
 	//connect calibrate button
 	connect(ui.calibrateButton, &QAbstractButton::released, recog, &recognition::startCalibrate);
+	//connect start/stop button
+	connect(ui.stopButton, &QAbstractButton::released, this, &sentrygui::stopstart);
 
 	//connection for initialization
 	connect(this, &sentrygui::targetInit, recog, &recognition::init);
@@ -90,12 +93,30 @@ void sentrygui::updateCamStatus(QString text)
 //once target initialized, emit signal to calibrate
 void sentrygui::getInitialized()
 {
+	capturing = true;
 	emit targetCalibrate();
 }
 
-//once calibrated, start idling
+//once calibrated, start scanning
 void sentrygui::getCalibration()
 {
 	state = 2;
 	emit startProcess();
+}
+
+//if s is true, set capturing to true, if s is false, capturing = false
+void sentrygui::stopstart()
+{
+	if (capturing == false)
+	{
+		capturing = true;
+		ui.stopButton->setText(QString("START"));
+		emit switchCapture(true);
+	}
+	else
+	{
+		capturing = false;
+		ui.stopButton->setText(QString("STOP"));
+		emit switchCapture(false);
+	}
 }

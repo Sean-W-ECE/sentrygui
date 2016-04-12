@@ -33,11 +33,6 @@ public:
 	~recognition();
 	void init();
 	void calibrate();
-	/*static double computeReprojectionErrors(const vector<vector<Point3f> >& objectPoints,
-		const vector<vector<Point2f> >& imagePoints,
-		const vector<Mat>& rvecs, const vector<Mat>& tvecs,
-		const Mat& cameraMatrix, const Mat& distCoeffs,
-		vector<float>& perViewErrors);*/
 
 private:
 	cv::Mat frame;
@@ -63,7 +58,8 @@ signals:
 public slots:
 	void startCalibrate();
 	void process();
-	void endCapture();
+	void endProcess();
+	void toggleCapture(bool on);
 	void reset();
 };
 
