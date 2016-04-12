@@ -5,7 +5,7 @@ using namespace cv;
 using namespace std;
 
 #define SCANINCREMENT 30
-#define RFIND_BYTES 6
+#define RFIND_BYTES 7
 
 char key;
 int thresh = 127;
