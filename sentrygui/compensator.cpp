@@ -102,7 +102,7 @@ void compensator::init()
 			{
 				for (int j = 0; j < RANGESIZE; j++)
 				{
-					compensation[i][j] = NAN;
+					compensation[i][j] = 20;
 				}
 			}
 		}

@@ -46,7 +46,7 @@ double InitTilt = TiltAngle;
 double InitPan = PanAngle;
 
 //firing tolerance: how close camera has to be to target before gun fires
-int firingTolerance = 5;
+int firingTolerance = 6;
 
 unsigned int PanWord = 0;
 unsigned int TiltWord = 0;
@@ -623,14 +623,13 @@ void recognition::process()
 		if (target_centered && !begin_wait) {
 			// Run compensation module
 
-#if 0
 			//string for range data
 			string dist = "";
 			//char array for receiving data from serial
 			char distance[16];
 			int reads = 0;
 			//final value for distance (0 - 4000)
-			long unsigned int tar_dist = 0;
+			unsigned int tar_dist = 0;
 			read_range = true;
 			emit sendCamStatus(QString("Compensating"));
 
@@ -659,13 +658,19 @@ void recognition::process()
 				// Due to the issue mentioned above, the program will only
 				// keep the first value returned through serial.
 				if (reads == 0) {
-					tar_dist = stol(dist, nullptr, 10);
+					tar_dist = stoi(dist, nullptr, 10);
 					consoleMessage = "Distance taken: " + tar_dist;
 					emit sendConsoleText(consoleMessage);
 				}
 				dist = "";
 			}
-#endif
+
+			//get new tilt from compensation
+			compData tilting = comp->compensate(TiltWord, tar_dist);
+			if (tilting.status == 0)
+			{
+				TiltWord = tilting.Tilt;
+			}
 
 			//Fire!
 			fire = true;
@@ -808,14 +813,10 @@ void recognition::process()
 				//target_confirmed_points = targetpoint;
 				NewPanDelta = thetapPxW*round(view_center.x - targetpoint.x);
 				NewTiltDelta = thetapPxH*round(view_center.y - targetpoint.y);
-				if (!begin_wait) {
-					NewPanAngle = (PanAngle + NewPanDelta);
-					PanWord = (int)round((double)NewPanAngle / pan_increment);
-					NewTiltAngle = (TiltAngle + NewTiltDelta);
-					TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-
-					//begin_wait = true;
-				}
+				NewPanAngle = (PanAngle + NewPanDelta);
+				PanWord = (int)round((double)NewPanAngle / pan_increment);
+				NewTiltAngle = (TiltAngle + NewTiltDelta);
+				TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
 
 				string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
 				int baseLine = 0;
@@ -823,7 +824,7 @@ void recognition::process()
 				Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
 				putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
 
-				if (found_points.size()<3)
+				if (!begin_wait && found_points.size()<3)
 					found_points.push_back(targetpoint);
 				else {
 
@@ -836,12 +837,15 @@ void recognition::process()
 								target_confirmed_points = found_points[i];
 								NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
 								NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
-								NewPanAngle = (PanAngle + NewPanDelta);
-								PanWord = (int)round((double)NewPanAngle / pan_increment);
-								NewTiltAngle = (TiltAngle + NewTiltDelta);
-								TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-								//time(&start_time);
-								//begin_wait = true;
+								if (!begin_wait)
+								{
+									NewPanAngle = (PanAngle + NewPanDelta);
+									PanWord = (int)round((double)NewPanAngle / pan_increment);
+									NewTiltAngle = (TiltAngle + NewTiltDelta);
+									TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+									//time(&start_time);
+									//begin_wait = true;
+								}
 
 								string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
 								int baseLine = 0;
@@ -853,13 +857,10 @@ void recognition::process()
 								break;
 							}
 						}
-						if (counts >= 3) {
-							found_points.clear();
-							counts = 0;
-							break;
-						}
 					}
 				}
+				found_points.clear();
+				counts = 0;
 			}
 			// Otherwise, say no target was found
 			else {
