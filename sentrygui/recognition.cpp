@@ -637,7 +637,7 @@ void recognition::process()
 
 			//Receive data from serial
 			for (reads = 0; reads < 1; reads++) {
-				Sleep(100);
+				Sleep(1000);
 
 				// Now Arduino will read the distance from the sensor
 				// and return it.
@@ -663,9 +663,14 @@ void recognition::process()
 					emit sendConsoleText(QString::fromStdString(dist));
 					try
 					{
-						tar_dist = stoi(dist, nullptr, 10);
+						tar_dist = stol(dist, NULL, 10);
 					}
 					catch (const invalid_argument& ia)
+					{
+						emit sendConsoleText(QString("Error: invalid argument for distance"));
+						tar_dist = 0;
+					}
+					catch (const out_of_range& ora)
 					{
 						emit sendConsoleText(QString("Error: invalid argument for distance"));
 						tar_dist = 0;
