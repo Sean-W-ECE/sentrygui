@@ -25,6 +25,7 @@ signals:
 	void startProcess();
 	void endProcess();
 	void switchCapture(bool on);
+	void shotFeedback(int stat);
 
 private:
 	Ui::sentryguiClass ui;
@@ -60,6 +61,8 @@ public slots:
 	void getCalibration();
 	//handler for STOP/START button
 	void stopstart();
+	//handle user feedback from GUI buttons
+	void feedbackHandler(QAbstractButton*);
 };
 
 #endif // SENTRYGUI_H

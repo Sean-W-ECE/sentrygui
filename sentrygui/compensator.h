@@ -18,6 +18,7 @@ public:
 	void init();
 	int writeback();
 	compData compensate(unsigned int TiltWord, unsigned int Range);
+	void update(float newCompVal, unsigned int tilt, unsigned int range);
 
 private:
 	//matrix of base compensation values.

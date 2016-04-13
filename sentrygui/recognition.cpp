@@ -21,9 +21,12 @@ bool target_found = false;
 bool target_centered = false;
 bool read_range = false;
 bool fire = false;
+//Auto scanning/firing mode indicator
 volatile bool AUTOTURRET = false;
 //result of the shot (high/low/hit)
 int shot_result = 0;
+//waiting for user input after firing if true
+bool input_wait = false;
 QString consoleMessage;
 
 int cornersH = 6;
@@ -39,20 +42,20 @@ volatile bool haltProcess;
 //reset turret position
 volatile bool resetSentry;
 
-// These will have to change depending on what the previous angle was set to.
+// Degree angles of turret/camera pan and tilt
 volatile double PanAngle = 90.0;
 volatile double TiltAngle = 90.0;
-//initial tilt angle used for resetting after successful shot
-double OldTilt = TiltAngle;
+//unsigned words used to set servo positions
+volatile unsigned int PanWord = 512;
+volatile unsigned int TiltWord = 512;
+//old tilt word used for recording compensation values
+unsigned int OldTilt = TiltWord;
 //initial tilt
 double InitTilt = TiltAngle;
 double InitPan = PanAngle;
 
 //firing tolerance: how close camera has to be to target before gun fires
 int firingTolerance = 6;
-
-volatile unsigned int PanWord = 0;
-volatile unsigned int TiltWord = 0;
 
 double NewPanDelta = 0;
 double NewTiltDelta = 0;
@@ -558,8 +561,7 @@ void recognition::process()
 	int wait_time = 3; //default wait 3 seconds between movements
 	target_found = false;
 	target_centered = false;
-	//waiting for user input after firing if true
-	bool input_wait = false;
+	
 
 	int frameCount = 0;
 
@@ -703,20 +705,36 @@ void recognition::process()
 				fire = true;
 				emit sendCamStatus(QString("Firing!"));
 				moveTurret();
-				//reset flags so that it won't fire again
-				fire = false;
-				target_centered = false;
-				target_found = false;
 
 				//set user input wait flag
 				input_wait = true;
 				//wait for input to set it to false
 				while (input_wait)
 					QCoreApplication::processEvents(0); //process events
+				//after waiting over, check shot result
+				switch (shot_result)
+				{
+				case 0:
+					//store successful compensation in matrix
+					float newCompVal = TiltWord - OldTilt;
+					comp->update(newCompVal, OldTilt, tar_dist);
+					//reset flags so that it won't fire again
+					fire = false;
+					target_centered = false;
+					target_found = false;
+					//wait for a bit
+					wait_time = 5;
+					time(&start_time);
+					begin_wait = true;
+					//write change back to compensation file while we have time
+					comp->writeback();
+					break;
+				//TODO: other cases when adjusting is necessary
+				}
 				//user feedback not implemented yet, just wait for a second for now
-				wait_time = 5;
+				/*wait_time = 5;
 				time(&start_time);
-				begin_wait = true;
+				begin_wait = true;*/
 			}
 
 			// Convert screencap into HLS from RGB
@@ -840,6 +858,8 @@ void recognition::process()
 						consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
 						if (frameCount == 30) emit sendConsoleText(consoleMessage);
 						target_centered = true;
+						//store current tilt as the old tilt (for future compensation)
+						OldTilt = TiltWord;
 					}
 					else target_centered = false;
 
@@ -994,5 +1014,8 @@ void recognition::reset()
 //int param is provided by GUI
 void recognition::shotFeedback(int stat)
 {
+	//update result
 	shot_result = stat;
+	//stop waiting
+	input_wait = false;
 }

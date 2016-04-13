@@ -28,6 +28,9 @@ void sentrygui::setup()
 	thread = new QThread(this);
 	//create targeting module in new thread
 	recognition* recog = new recognition(NULL);
+	
+	/* Connections for Signals and Slots */
+
 	//connect basics
 	connect(thread, &QThread::finished, recog, &QObject::deleteLater);
 	connect(this, &sentrygui::endProcess, recog, &recognition::endProcess);
@@ -38,12 +41,15 @@ void sentrygui::setup()
 	//attach console text writer
 	connect(recog, &recognition::sendConsoleText, this, &sentrygui::printConsole);
 
+	/* Button Connections */
 	//connect reset button to recognition
 	connect(ui.resetButton, &QAbstractButton::released, recog, &recognition::reset);
-	//connect calibrate button
+	//connect calibrate button directly to recognition
 	connect(ui.calibrateButton, &QAbstractButton::released, recog, &recognition::startCalibrate);
-	//connect start/stop button
+	//connect start/stop button to GUI
 	connect(ui.stopButton, &QAbstractButton::released, this, &sentrygui::stopstart);
+	//connect feedback buttons to GUI
+	connect(ui.feedbackGroup, static_cast<void(QButtonGroup::*)(QAbstractButton*)>(&QButtonGroup::buttonReleased), this, &sentrygui::feedbackHandler);
 
 	//connection for initialization
 	connect(this, &sentrygui::targetInit, recog, &recognition::init);
@@ -53,11 +59,15 @@ void sentrygui::setup()
 	connect(this, &sentrygui::startProcess, recog, &recognition::process);
 	connect(this, &sentrygui::switchCapture, recog, &recognition::toggleCapture);
 
+	/* Startup Signal Chain */
 	//connect init flag
 	connect(recog, &recognition::sendInit, this, &sentrygui::getInitialized);
 	//connect calibrated flag
 	connect(recog, &recognition::sendCalibrated, this, &sentrygui::getCalibration);
+	//connect user feedback system
+	connect(this, &sentrygui::shotFeedback, recog, &recognition::shotFeedback);
 
+	/* Graphics Stuff */
 	//create the Pixmap item
 	mapItem = new QGraphicsPixmapItem();
 	//set view in UI to scene
@@ -66,6 +76,7 @@ void sentrygui::setup()
 	//add item to scene
 	scene.addItem(mapItem);
 	
+	/* GUI Console */
 	//initialize console
 	ui.console->setReadOnly(1);
 	//move recog object to thread and start
@@ -138,5 +149,43 @@ void sentrygui::stopstart()
 		capturing = false;
 		ui.stopButton->setText(QString("STOP"));
 		emit switchCapture(false);
+	}
+}
+
+//SLOT: handles button pressed from the feedback buttons
+//param is pointer to the button that was pressed
+void sentrygui::feedbackHandler(QAbstractButton* qb)
+{
+	//get text of button
+	QString txt = qb->text();
+	//handle Hit clicked
+	if (!txt.compare(QString("HIT"), Qt::CaseSensitive))
+	{
+		//send 0 to recog shotFeedback
+		emit shotFeedback(0);
+	}
+	//handle Very Low clicked
+	if (!txt.compare(QString("VERY LOW"), Qt::CaseSensitive))
+	{
+		//send -2 to recog shotFeedback
+		emit shotFeedback(-2);
+	}
+	//handle Low clicked
+	if (!txt.compare(QString("LOW"), Qt::CaseSensitive))
+	{
+		//send -1 to recog shotFeedback
+		emit shotFeedback(-1);
+	}
+	//handle High clicked
+	if (!txt.compare(QString("HIGH"), Qt::CaseSensitive))
+	{
+		//send 1 to recog shotFeedback
+		emit shotFeedback(1);
+	}
+	//handle Very High clicked
+	if (!txt.compare(QString("VERY HIGH"), Qt::CaseSensitive))
+	{
+		//send 2 to recog shotFeedback
+		emit shotFeedback(2);
 	}
 }

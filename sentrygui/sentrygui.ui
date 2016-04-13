@@ -44,7 +44,7 @@
        <bool>true</bool>
       </property>
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -92,7 +92,7 @@
        <bool>true</bool>
       </property>
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -140,7 +140,7 @@
        <bool>true</bool>
       </property>
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -194,7 +194,7 @@
        <bool>true</bool>
       </property>
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -420,13 +420,13 @@
     <string>STOP</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>800</x>
      <y>520</y>
      <width>301</width>
-     <height>71</height>
+     <height>73</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
@@ -455,8 +455,11 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>LOW</string>
+       <string>VERY LOW</string>
       </property>
+      <attribute name="buttonGroup">
+       <string notr="true">feedbackGroup</string>
+      </attribute>
      </widget>
     </item>
     <item row="1" column="1" rowspan="2">
@@ -470,6 +473,9 @@
       <property name="text">
        <string>HIT</string>
       </property>
+      <attribute name="buttonGroup">
+       <string notr="true">feedbackGroup</string>
+      </attribute>
      </widget>
     </item>
     <item row="1" column="2">
@@ -481,8 +487,11 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>HIGH</string>
+       <string>VERY HIGH</string>
       </property>
+      <attribute name="buttonGroup">
+       <string notr="true">feedbackGroup</string>
+      </attribute>
      </widget>
     </item>
     <item row="2" column="0">
@@ -494,8 +503,11 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>low</string>
+       <string>LOW</string>
       </property>
+      <attribute name="buttonGroup">
+       <string notr="true">feedbackGroup</string>
+      </attribute>
      </widget>
     </item>
     <item row="2" column="2">
@@ -507,8 +519,11 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>high</string>
+       <string>HIGH</string>
       </property>
+      <attribute name="buttonGroup">
+       <string notr="true">feedbackGroup</string>
+      </attribute>
      </widget>
     </item>
    </layout>
@@ -519,4 +534,7 @@
   <include location="sentrygui.qrc"/>
  </resources>
  <connections/>
+ <buttongroups>
+  <buttongroup name="feedbackGroup"/>
+ </buttongroups>
 </ui>

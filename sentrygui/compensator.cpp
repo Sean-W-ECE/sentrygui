@@ -283,3 +283,9 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 	}
 	return retVal;
 }
+
+//Update a compensation value stored in the matrix with new one
+void compensator::update(float newCompVal, unsigned int tilt, unsigned int range)
+{
+	compensation[tilt][range] = newCompVal;
+}

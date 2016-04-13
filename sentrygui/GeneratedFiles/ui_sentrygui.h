@@ -49,7 +49,7 @@ public:
     QPushButton *resetButton;
     QPushButton *calibrateButton;
     QPushButton *stopButton;
-    QWidget *widget;
+    QWidget *layoutWidget2;
     QGridLayout *gridLayout;
     QLabel *feedbackLabel;
     QPushButton *VeryLow;
@@ -57,6 +57,7 @@ public:
     QPushButton *VeryHigh;
     QPushButton *Low;
     QPushButton *High;
+    QButtonGroup *feedbackGroup;
 
     void setupUi(QWidget *sentryguiClass)
     {
@@ -83,7 +84,7 @@ public:
         camVDisplay = new QLineEdit(layoutWidget);
         camVDisplay->setObjectName(QStringLiteral("camVDisplay"));
         camVDisplay->setEnabled(true);
-        QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(camVDisplay->sizePolicy().hasHeightForWidth());
@@ -212,8 +213,11 @@ public:
         modeDisplay = new QLineEdit(layoutWidget1);
         modeDisplay->setObjectName(QStringLiteral("modeDisplay"));
         modeDisplay->setEnabled(true);
-        sizePolicy.setHeightForWidth(modeDisplay->sizePolicy().hasHeightForWidth());
-        modeDisplay->setSizePolicy(sizePolicy);
+        QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        sizePolicy4.setHorizontalStretch(0);
+        sizePolicy4.setVerticalStretch(0);
+        sizePolicy4.setHeightForWidth(modeDisplay->sizePolicy().hasHeightForWidth());
+        modeDisplay->setSizePolicy(sizePolicy4);
         modeDisplay->setMaximumSize(QSize(100, 16777215));
         modeDisplay->setFont(font);
         modeDisplay->setMouseTracking(false);
@@ -237,15 +241,15 @@ public:
         stopButton = new QPushButton(sentryguiClass);
         stopButton->setObjectName(QStringLiteral("stopButton"));
         stopButton->setGeometry(QRect(230, 520, 112, 34));
-        widget = new QWidget(sentryguiClass);
-        widget->setObjectName(QStringLiteral("widget"));
-        widget->setGeometry(QRect(800, 520, 301, 71));
-        gridLayout = new QGridLayout(widget);
+        layoutWidget2 = new QWidget(sentryguiClass);
+        layoutWidget2->setObjectName(QStringLiteral("layoutWidget2"));
+        layoutWidget2->setGeometry(QRect(800, 520, 301, 73));
+        gridLayout = new QGridLayout(layoutWidget2);
         gridLayout->setSpacing(6);
         gridLayout->setContentsMargins(11, 11, 11, 11);
         gridLayout->setObjectName(QStringLiteral("gridLayout"));
         gridLayout->setContentsMargins(0, 0, 0, 0);
-        feedbackLabel = new QLabel(widget);
+        feedbackLabel = new QLabel(layoutWidget2);
         feedbackLabel->setObjectName(QStringLiteral("feedbackLabel"));
         sizePolicy1.setHeightForWidth(feedbackLabel->sizePolicy().hasHeightForWidth());
         feedbackLabel->setSizePolicy(sizePolicy1);
@@ -253,41 +257,48 @@ public:
 
         gridLayout->addWidget(feedbackLabel, 0, 1, 1, 1);
 
-        VeryLow = new QPushButton(widget);
+        VeryLow = new QPushButton(layoutWidget2);
+        feedbackGroup = new QButtonGroup(sentryguiClass);
+        feedbackGroup->setObjectName(QStringLiteral("feedbackGroup"));
+        feedbackGroup->addButton(VeryLow);
         VeryLow->setObjectName(QStringLiteral("VeryLow"));
-        QSizePolicy sizePolicy4(QSizePolicy::Minimum, QSizePolicy::Expanding);
-        sizePolicy4.setHorizontalStretch(0);
-        sizePolicy4.setVerticalStretch(0);
-        sizePolicy4.setHeightForWidth(VeryLow->sizePolicy().hasHeightForWidth());
-        VeryLow->setSizePolicy(sizePolicy4);
+        QSizePolicy sizePolicy5(QSizePolicy::Minimum, QSizePolicy::Expanding);
+        sizePolicy5.setHorizontalStretch(0);
+        sizePolicy5.setVerticalStretch(0);
+        sizePolicy5.setHeightForWidth(VeryLow->sizePolicy().hasHeightForWidth());
+        VeryLow->setSizePolicy(sizePolicy5);
 
         gridLayout->addWidget(VeryLow, 1, 0, 1, 1);
 
-        Hit = new QPushButton(widget);
+        Hit = new QPushButton(layoutWidget2);
+        feedbackGroup->addButton(Hit);
         Hit->setObjectName(QStringLiteral("Hit"));
-        sizePolicy4.setHeightForWidth(Hit->sizePolicy().hasHeightForWidth());
-        Hit->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(Hit->sizePolicy().hasHeightForWidth());
+        Hit->setSizePolicy(sizePolicy5);
 
         gridLayout->addWidget(Hit, 1, 1, 2, 1);
 
-        VeryHigh = new QPushButton(widget);
+        VeryHigh = new QPushButton(layoutWidget2);
+        feedbackGroup->addButton(VeryHigh);
         VeryHigh->setObjectName(QStringLiteral("VeryHigh"));
-        sizePolicy4.setHeightForWidth(VeryHigh->sizePolicy().hasHeightForWidth());
-        VeryHigh->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(VeryHigh->sizePolicy().hasHeightForWidth());
+        VeryHigh->setSizePolicy(sizePolicy5);
 
         gridLayout->addWidget(VeryHigh, 1, 2, 1, 1);
 
-        Low = new QPushButton(widget);
+        Low = new QPushButton(layoutWidget2);
+        feedbackGroup->addButton(Low);
         Low->setObjectName(QStringLiteral("Low"));
-        sizePolicy4.setHeightForWidth(Low->sizePolicy().hasHeightForWidth());
-        Low->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(Low->sizePolicy().hasHeightForWidth());
+        Low->setSizePolicy(sizePolicy5);
 
         gridLayout->addWidget(Low, 2, 0, 1, 1);
 
-        High = new QPushButton(widget);
+        High = new QPushButton(layoutWidget2);
+        feedbackGroup->addButton(High);
         High->setObjectName(QStringLiteral("High"));
-        sizePolicy4.setHeightForWidth(High->sizePolicy().hasHeightForWidth());
-        High->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(High->sizePolicy().hasHeightForWidth());
+        High->setSizePolicy(sizePolicy5);
 
         gridLayout->addWidget(High, 2, 2, 1, 1);
 
@@ -312,11 +323,11 @@ public:
         calibrateButton->setText(QApplication::translate("sentryguiClass", "CALIBRATE", 0));
         stopButton->setText(QApplication::translate("sentryguiClass", "STOP", 0));
         feedbackLabel->setText(QApplication::translate("sentryguiClass", "Shot Feedback", 0));
-        VeryLow->setText(QApplication::translate("sentryguiClass", "LOW", 0));
+        VeryLow->setText(QApplication::translate("sentryguiClass", "VERY LOW", 0));
         Hit->setText(QApplication::translate("sentryguiClass", "HIT", 0));
-        VeryHigh->setText(QApplication::translate("sentryguiClass", "HIGH", 0));
-        Low->setText(QApplication::translate("sentryguiClass", "low", 0));
-        High->setText(QApplication::translate("sentryguiClass", "high", 0));
+        VeryHigh->setText(QApplication::translate("sentryguiClass", "VERY HIGH", 0));
+        Low->setText(QApplication::translate("sentryguiClass", "LOW", 0));
+        High->setText(QApplication::translate("sentryguiClass", "HIGH", 0));
     } // retranslateUi
 
 };
