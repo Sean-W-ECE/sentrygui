@@ -14,6 +14,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QGraphicsView>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
@@ -48,15 +49,23 @@ public:
     QPushButton *resetButton;
     QPushButton *calibrateButton;
     QPushButton *stopButton;
+    QWidget *widget;
+    QGridLayout *gridLayout;
+    QLabel *feedbackLabel;
+    QPushButton *VeryLow;
+    QPushButton *Hit;
+    QPushButton *VeryHigh;
+    QPushButton *Low;
+    QPushButton *High;
 
     void setupUi(QWidget *sentryguiClass)
     {
         if (sentryguiClass->objectName().isEmpty())
             sentryguiClass->setObjectName(QStringLiteral("sentryguiClass"));
-        sentryguiClass->resize(1141, 618);
+        sentryguiClass->resize(1172, 601);
         layoutWidget = new QWidget(sentryguiClass);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
-        layoutWidget->setGeometry(QRect(210, 570, 801, 35));
+        layoutWidget->setGeometry(QRect(20, 560, 761, 35));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setSpacing(6);
         horizontalLayout->setContentsMargins(11, 11, 11, 11);
@@ -154,7 +163,7 @@ public:
 
         layoutWidget1 = new QWidget(sentryguiClass);
         layoutWidget1->setObjectName(QStringLiteral("layoutWidget1"));
-        layoutWidget1->setGeometry(QRect(370, 530, 474, 35));
+        layoutWidget1->setGeometry(QRect(360, 520, 421, 35));
         horizontalLayout_2 = new QHBoxLayout(layoutWidget1);
         horizontalLayout_2->setSpacing(6);
         horizontalLayout_2->setContentsMargins(11, 11, 11, 11);
@@ -215,19 +224,73 @@ public:
 
         camView = new QGraphicsView(sentryguiClass);
         camView->setObjectName(QStringLiteral("camView"));
-        camView->setGeometry(QRect(20, 20, 661, 501));
+        camView->setGeometry(QRect(20, 10, 661, 501));
         console = new QTextEdit(sentryguiClass);
         console->setObjectName(QStringLiteral("console"));
-        console->setGeometry(QRect(710, 20, 411, 501));
+        console->setGeometry(QRect(710, 10, 411, 501));
         resetButton = new QPushButton(sentryguiClass);
         resetButton->setObjectName(QStringLiteral("resetButton"));
-        resetButton->setGeometry(QRect(20, 530, 81, 34));
+        resetButton->setGeometry(QRect(20, 520, 81, 34));
         calibrateButton = new QPushButton(sentryguiClass);
         calibrateButton->setObjectName(QStringLiteral("calibrateButton"));
-        calibrateButton->setGeometry(QRect(110, 530, 112, 34));
+        calibrateButton->setGeometry(QRect(110, 520, 112, 34));
         stopButton = new QPushButton(sentryguiClass);
         stopButton->setObjectName(QStringLiteral("stopButton"));
-        stopButton->setGeometry(QRect(240, 530, 112, 34));
+        stopButton->setGeometry(QRect(230, 520, 112, 34));
+        widget = new QWidget(sentryguiClass);
+        widget->setObjectName(QStringLiteral("widget"));
+        widget->setGeometry(QRect(800, 520, 301, 71));
+        gridLayout = new QGridLayout(widget);
+        gridLayout->setSpacing(6);
+        gridLayout->setContentsMargins(11, 11, 11, 11);
+        gridLayout->setObjectName(QStringLiteral("gridLayout"));
+        gridLayout->setContentsMargins(0, 0, 0, 0);
+        feedbackLabel = new QLabel(widget);
+        feedbackLabel->setObjectName(QStringLiteral("feedbackLabel"));
+        sizePolicy1.setHeightForWidth(feedbackLabel->sizePolicy().hasHeightForWidth());
+        feedbackLabel->setSizePolicy(sizePolicy1);
+        feedbackLabel->setAlignment(Qt::AlignHCenter|Qt::AlignTop);
+
+        gridLayout->addWidget(feedbackLabel, 0, 1, 1, 1);
+
+        VeryLow = new QPushButton(widget);
+        VeryLow->setObjectName(QStringLiteral("VeryLow"));
+        QSizePolicy sizePolicy4(QSizePolicy::Minimum, QSizePolicy::Expanding);
+        sizePolicy4.setHorizontalStretch(0);
+        sizePolicy4.setVerticalStretch(0);
+        sizePolicy4.setHeightForWidth(VeryLow->sizePolicy().hasHeightForWidth());
+        VeryLow->setSizePolicy(sizePolicy4);
+
+        gridLayout->addWidget(VeryLow, 1, 0, 1, 1);
+
+        Hit = new QPushButton(widget);
+        Hit->setObjectName(QStringLiteral("Hit"));
+        sizePolicy4.setHeightForWidth(Hit->sizePolicy().hasHeightForWidth());
+        Hit->setSizePolicy(sizePolicy4);
+
+        gridLayout->addWidget(Hit, 1, 1, 2, 1);
+
+        VeryHigh = new QPushButton(widget);
+        VeryHigh->setObjectName(QStringLiteral("VeryHigh"));
+        sizePolicy4.setHeightForWidth(VeryHigh->sizePolicy().hasHeightForWidth());
+        VeryHigh->setSizePolicy(sizePolicy4);
+
+        gridLayout->addWidget(VeryHigh, 1, 2, 1, 1);
+
+        Low = new QPushButton(widget);
+        Low->setObjectName(QStringLiteral("Low"));
+        sizePolicy4.setHeightForWidth(Low->sizePolicy().hasHeightForWidth());
+        Low->setSizePolicy(sizePolicy4);
+
+        gridLayout->addWidget(Low, 2, 0, 1, 1);
+
+        High = new QPushButton(widget);
+        High->setObjectName(QStringLiteral("High"));
+        sizePolicy4.setHeightForWidth(High->sizePolicy().hasHeightForWidth());
+        High->setSizePolicy(sizePolicy4);
+
+        gridLayout->addWidget(High, 2, 2, 1, 1);
+
 
         retranslateUi(sentryguiClass);
 
@@ -248,6 +311,12 @@ public:
         resetButton->setText(QApplication::translate("sentryguiClass", "RESET", 0));
         calibrateButton->setText(QApplication::translate("sentryguiClass", "CALIBRATE", 0));
         stopButton->setText(QApplication::translate("sentryguiClass", "STOP", 0));
+        feedbackLabel->setText(QApplication::translate("sentryguiClass", "Shot Feedback", 0));
+        VeryLow->setText(QApplication::translate("sentryguiClass", "LOW", 0));
+        Hit->setText(QApplication::translate("sentryguiClass", "HIT", 0));
+        VeryHigh->setText(QApplication::translate("sentryguiClass", "HIGH", 0));
+        Low->setText(QApplication::translate("sentryguiClass", "low", 0));
+        High->setText(QApplication::translate("sentryguiClass", "high", 0));
     } // retranslateUi
 
 };

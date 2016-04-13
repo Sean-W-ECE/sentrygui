@@ -4,6 +4,7 @@
 #include <QtWidgets/QWidget>
 #include <qimage.h>
 #include <qthread.h>
+#include <QKeyEvent>
 #include "ui_sentrygui.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -43,6 +44,8 @@ private:
 	//setup for thread
 	void setup();
 	
+protected:
+	void keyPressed(QKeyEvent*);
 
 public slots:
 	//receive Mat from thread

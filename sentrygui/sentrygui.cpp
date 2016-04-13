@@ -76,39 +76,55 @@ void sentrygui::setup()
 	//Calibration and scan start done via signal chain
 }
 
-//receive image, convert to QImage, display to UI
+//FUNCTION: register key press events
+void sentrygui::keyPressed(QKeyEvent* ev)
+{
+	//press g to start calibration process after init
+	if (ev->key() == Qt::Key_G)
+	{
+		printConsole(QString("G pressed"));
+		emit targetCalibrate();
+	}
+	//press space as test
+	if (ev->key() == Qt::Key_Space)
+	{
+		printConsole(QString("Space was pressed"));
+	}
+}
+
+//SLOT: receive image, convert to QImage, display to UI
 void sentrygui::receiveImage(QImage image)
 {
 	mapItem->setPixmap(QPixmap::fromImage(image));
 }
 
-//print text to console
+//SLOT: print text to console
 void sentrygui::printConsole(QString text)
 {
 	ui.console->append(text);
 }
 
-//update the status field
+//SLOT: update the status field
 void sentrygui::updateCamStatus(QString text)
 {
 	ui.statusDisplay->setText(text);
 }
 
-//once target initialized, emit signal to calibrate
+//SLOT: once target initialized, emit signal to calibrate
 void sentrygui::getInitialized()
 {
 	capturing = true;
 	emit targetCalibrate();
 }
 
-//once calibrated, start scanning
+//SLOT: once calibrated, start scanning
 void sentrygui::getCalibration()
 {
 	state = 2;
 	emit startProcess();
 }
 
-//if s is true, set capturing to true, if s is false, capturing = false
+//SLOT: if s is true, set capturing to true, if s is false, capturing = false
 void sentrygui::stopstart()
 {
 	if (capturing == false)

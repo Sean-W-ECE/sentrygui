@@ -61,6 +61,7 @@ public slots:
 	void endProcess();
 	void toggleCapture(bool on);
 	void reset();
+	void shotFeedback(int stat);
 };
 
 #endif // RECOGNITION_H

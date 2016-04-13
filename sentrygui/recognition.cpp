@@ -21,7 +21,9 @@ bool target_found = false;
 bool target_centered = false;
 bool read_range = false;
 bool fire = false;
-bool AUTOTURRET = false;
+volatile bool AUTOTURRET = false;
+//result of the shot (high/low/hit)
+int shot_result = 0;
 QString consoleMessage;
 
 int cornersH = 6;
@@ -33,9 +35,9 @@ double thetapPxH, thetapPxW;
 // Creates videocapture object to capture from camera
 VideoCapture capture;
 //used to kill loops (manual and auto)
-bool haltProcess;
+volatile bool haltProcess;
 //reset turret position
-bool resetSentry;
+volatile bool resetSentry;
 
 // These will have to change depending on what the previous angle was set to.
 volatile double PanAngle = 90.0;
@@ -556,6 +558,8 @@ void recognition::process()
 	int wait_time = 3; //default wait 3 seconds between movements
 	target_found = false;
 	target_centered = false;
+	//waiting for user input after firing if true
+	bool input_wait = false;
 
 	int frameCount = 0;
 
@@ -569,8 +573,7 @@ void recognition::process()
 
 	time(&start_time);
 
-	//tell UI cam is entering scanning mode
-	emit sendCamStatus(QString("Scanning"));
+	//Auto mode initially true
 	AUTOTURRET = true;
 
 	//main scanning function
@@ -624,6 +627,9 @@ void recognition::process()
 		/* Automatic targeting and firing portion */
 		if (AUTOTURRET)
 		{
+			//tell UI cam is entering scanning mode
+			emit sendCamStatus(QString("Scanning"));
+			
 			//if target aligned and not waiting for servo movement, compensate
 			if (target_centered && !begin_wait) {
 				// Run compensation module
@@ -664,8 +670,8 @@ void recognition::process()
 					// Due to the issue mentioned above, the program will only
 					// keep the first value returned through serial.
 					if (reads == 0) {
-						emit sendConsoleText(QString("Target distance:"));
-						emit sendConsoleText(QString::fromStdString(dist));
+						consoleMessage = QString("Target distance: ") + QString::fromStdString(dist);
+						emit sendConsoleText(consoleMessage);
 						try
 						{
 							tar_dist = stol(dist, NULL, 10);
@@ -701,6 +707,12 @@ void recognition::process()
 				fire = false;
 				target_centered = false;
 				target_found = false;
+
+				//set user input wait flag
+				input_wait = true;
+				//wait for input to set it to false
+				while (input_wait)
+					QCoreApplication::processEvents(0); //process events
 				//user feedback not implemented yet, just wait for a second for now
 				wait_time = 5;
 				time(&start_time);
@@ -824,7 +836,7 @@ void recognition::process()
 						consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x, targetpoint.y);
 						emit sendConsoleText(consoleMessage);
 					}
-					if (abs(targetpoint.x - view_center.x) < 3 && abs(targetpoint.y - view_center.y) < 3) {
+					if (abs(targetpoint.x - view_center.x) < firingTolerance && abs(targetpoint.y - view_center.y) < firingTolerance) {
 						consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
 						if (frameCount == 30) emit sendConsoleText(consoleMessage);
 						target_centered = true;
@@ -848,6 +860,10 @@ void recognition::process()
 					Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 					Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
 					putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
+					if (frameCount == 30)
+					{
+						emit sendConsoleText(QString::fromStdString(msg));
+					}
 
 					if (found_points.size()<3)
 						found_points.push_back(targetpoint);
@@ -896,8 +912,10 @@ void recognition::process()
 			}
 			// If no green contours detected, say nothing found.
 			else {
-				emit sendConsoleText(QString("No green objects detected. Target not found..."));
-
+				if (frameCount == 30)
+				{
+					emit sendConsoleText(QString("No green objects detected. Target not found..."));
+				}
 			}
 
 			//servo control
@@ -924,7 +942,7 @@ void recognition::process()
 				time(&start_time);
 				begin_wait = true;
 			}
-		}
+		} //End of AUTOTURRET section
 
 		//send frame to UI
 		sendFrame(frame);
@@ -943,6 +961,7 @@ void recognition::process()
 	return;
 }
 
+//start calibration process once in calibration mode
 void recognition::startCalibrate()
 {
 	emit sendConsoleText(QString("Start calibration"));
@@ -964,8 +983,16 @@ void recognition::endProcess()
 	haltProcess = true;
 }
 
+//reset the turret to initial position
 void recognition::reset()
 {
 	emit sendConsoleText(QString("resetting!"));
 	resetSentry = true;
+}
+
+//sets the result of the shot based on user feedback
+//int param is provided by GUI
+void recognition::shotFeedback(int stat)
+{
+	shot_result = stat;
 }
