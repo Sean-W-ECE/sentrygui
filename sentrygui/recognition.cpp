@@ -720,26 +720,39 @@ void recognition::process()
 					TiltWord = tilting.Tilt;
 				}
 
-				//Fire!
-				fire = true;
-				emit sendCamStatus(QString("Firing!"));
-				moveTurret();
+				//loop to fire and wait for input until hit
+				do
+				{
+					//Fire!
+					fire = true;
+					emit sendCamStatus(QString("Firing!"));
+					moveTurret();
 
-				//set user input wait flag
-				input_wait = true;
-				emit sendConsoleText(QString("Waiting for input"));
-				//wait for input to set it to false
-				while (input_wait)
-				{
-					//send image
-					capture >> frame;
-					sendFrame(frame);
-					QCoreApplication::processEvents(0); //process events
-				}
+					//set user input wait flag
+					input_wait = true;
+					emit sendConsoleText(QString("Waiting for input"));
+					//wait for input to set it to false
+					while (input_wait)
+					{
+						//send image
+						capture >> frame;
+						sendFrame(frame);
+						QCoreApplication::processEvents(0); //process events
+					}
+					//if not hit, adjust
+					if (shot_result != 0)
+					{
+						compData adj = comp->adjust(TiltWord, tilt_increment, tar_dist, shot_result);
+						if (adj.status != 0)
+						{
+							TiltWord = adj.Tilt;
+						}
+					}
+				} while (shot_result != 0 && AUTOTURRET);
+
 				//after waiting over, check shot result
-				switch (shot_result)
+				if (shot_result == 0)
 				{
-				case 0:
 					//store successful compensation in matrix
 					float newCompVal = TiltWord - OldTilt;
 					comp->update(newCompVal, OldTilt, tar_dist);
@@ -753,13 +766,7 @@ void recognition::process()
 					begin_wait = true;
 					//write change back to compensation file while we have time
 					comp->writeback();
-					break;
-				//TODO: other cases when adjusting is necessary
 				}
-				//user feedback not implemented yet, just wait for a second for now
-				/*wait_time = 5;
-				time(&start_time);
-				begin_wait = true;*/
 			}
 
 			// Convert screencap into HLS from RGB
