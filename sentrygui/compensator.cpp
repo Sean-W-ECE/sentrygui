@@ -4,6 +4,7 @@ using namespace std;
 
 #define TILTSIZE 1024
 #define RANGESIZE 801
+#define PI 3.14159265
 
 //file that data is read from / stored to
 fstream srcFile;
@@ -268,7 +269,7 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 				retVal.status = 10;
 			}
 		}
-		//if mod is negative, subtract from TiltWord, but bound to 0
+		//if mod is negative, subtract the abs value from TiltWord, but bound to 0
 		else
 		{
 			mod = abs(mod);
@@ -293,6 +294,87 @@ void compensator::update(float newCompVal, unsigned int tilt, unsigned int range
 }
 
 /*
+   adjust: used during feedback phase to adjust tilt
    comp angle (big changes) = arctan(13.47 / range) 
    comp angle (small changes) = arctan((13.47 / 2) / range)
 */
+compData compensator::adjust(unsigned int Tilt, double tiltIncr, unsigned int Range, int dir)
+{
+	//create return object
+	compData retVal = compData();
+	double newAngle;
+	unsigned int newTilt;
+
+	//Very High
+	if (dir == 2)
+	{
+		//move 5 inches down on target
+		//compute angle difference
+		newAngle = atan2(13.47, (double)Range) * 180.0 / PI;
+		newTilt = (int)round((double)newTilt / tiltIncr);
+		//add newTilt from original tilt to make gun go down
+		retVal.Tilt = Tilt + newTilt;
+		//check for out of bounds
+		if (!(retVal.Tilt < TILTSIZE))
+		{
+			retVal.Tilt = TILTSIZE - 1;
+			retVal.status = 10;
+		}
+	}
+	//High
+	else if (dir == 1)
+	{
+		//move 2.5 inches down on target
+		//compute angle difference
+		newAngle = atan2((13.47/2), (double)Range) * 180.0 / PI;
+		newTilt = (int)round((double)newTilt / tiltIncr);
+		//add newTilt from original tilt to make gun go down
+		retVal.Tilt = Tilt + newTilt;
+		//check for out of bounds
+		if (!(retVal.Tilt < TILTSIZE))
+		{
+			retVal.Tilt = TILTSIZE - 1;
+			retVal.status = 10;
+		}
+	}
+	//Low
+	else if (dir == -1)
+	{
+		//move 2.5 inches up on target
+		//compute angle difference
+		newAngle = atan2((13.47 / 2), (double)Range) * 180.0 / PI;
+		newTilt = (int)round((double)newTilt / tiltIncr);
+		//subtract newTilt from original tilt to make gun go up
+		retVal.Tilt = Tilt - newTilt;
+		//check for out of bounds
+		if (newTilt > Tilt)
+		{
+			retVal.Tilt = 0;
+			retVal.status = 11;
+		}
+	}
+	//Very Low
+	else if (dir == -2)
+	{
+		//move 5 inches up on target
+		//compute angle difference
+		newAngle = atan2(13.47, (double)Range) * 180.0 / PI;
+		newTilt = (int)round((double)newTilt / tiltIncr);
+		//subtract newTilt from original tilt to make gun go up
+		retVal.Tilt = Tilt - newTilt;
+		//check for out of bounds
+		if (newTilt > Tilt)
+		{
+			retVal.Tilt = 0;
+			retVal.status = 11;
+		}
+	}
+	//error
+	else
+	{
+		retVal.Tilt = Tilt;
+	}
+
+	//return 
+	return retVal;
+}

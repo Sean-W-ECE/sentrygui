@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <math.h>
 #include "compData.h"
 
 /*
@@ -19,6 +20,7 @@ public:
 	int writeback();
 	compData compensate(unsigned int TiltWord, unsigned int Range);
 	void update(float newCompVal, unsigned int tilt, unsigned int range);
+	compData compensator::adjust(unsigned int Tilt, double tiltIncr, unsigned int Range, int dir);
 
 private:
 	//matrix of base compensation values.
