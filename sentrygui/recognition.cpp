@@ -24,7 +24,7 @@ bool fire = false;
 //Auto scanning/firing mode indicator
 bool AUTOTURRET = false;
 //result of the shot (high/low/hit)
-int shot_result = 0;
+int shot_result = 10;
 //waiting for user input after firing if true
 bool input_wait = false;
 QString consoleMessage = QString::null;
@@ -714,7 +714,7 @@ void recognition::process()
 						}
 						catch (const out_of_range& ora)
 						{
-							emit sendConsoleText(QString("Error: invalid argument for distance"));
+							emit sendConsoleText(QString("Error: distance out of range"));
 							tar_dist = 0;
 						}
 						consoleMessage = "Distance taken: " + tar_dist;
@@ -734,12 +734,16 @@ void recognition::process()
 				}
 
 				//loop to fire and wait for input until hit
-				do
+				while (target_centered)
 				{
 					//Fire!
 					fire = true;
 					emit sendCamStatus(QString("Firing!"));
 					moveTurret();
+
+					//send image
+					capture >> frame;
+					sendFrame(frame);
 
 					//set user input wait flag
 					input_wait = true;
@@ -761,31 +765,30 @@ void recognition::process()
 						emit sendConsoleText(QString("current tilt:") + QString::fromStdString(to_string(TiltWord)));
 						emit sendConsoleText(QString("adj Tilt:") + QString::fromStdString(to_string(adj.Tilt)));
 						emit sendConsoleText(QString("adj status:") + QString::fromStdString(to_string(adj.status)));
-						if (adj.status != 0)
+						if (adj.status == 0)
 						{
 							TiltWord = adj.Tilt;
+							emit sendConsoleText(QString("final tilt:") + QString::fromStdString(to_string(TiltWord)));
 						}
-						moveTurret();
-					}
-				} while (shot_result != 0 && AUTOTURRET);
 
-				//after waiting over, check shot result
-				if (shot_result == 0)
-				{
-					//store successful compensation in matrix
-					float newCompVal = TiltWord - OldTilt;
-					comp->update(newCompVal, OldTilt, tar_dist);
-					//reset flags so that it won't fire again
-					fire = false;
-					target_centered = false;
-					target_found = false;
-					//wait for a bit
-					wait_time = 5;
-					time(&start_time);
-					begin_wait = true;
-					comp->resetDir();
-					//write change back to compensation file while we have time
-					comp->writeback();
+					}
+					else
+					{
+						//store successful compensation in matrix
+						float newCompVal = TiltWord - OldTilt;
+						comp->update(newCompVal, OldTilt, tar_dist);
+						//reset flags so that it won't fire again
+						fire = false;
+						target_centered = false;
+						target_found = false;
+						//wait for a bit
+						wait_time = 3;
+						time(&start_time);
+						begin_wait = true;
+						comp->resetDir();
+						//write change back to compensation file while we have time
+						comp->writeback();
+					}
 				}
 				//get new frame before continuing after firing
 				capture >> frame;
@@ -1065,6 +1068,7 @@ void recognition::shotFeedback(int stat)
 {
 	//update result
 	shot_result = stat;
+	emit sendConsoleText(QString("feedback=")+QString::fromStdString(to_string(shot_result)));
 	//stop waiting
 	input_wait = false;
 }
