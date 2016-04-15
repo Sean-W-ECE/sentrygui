@@ -565,8 +565,8 @@ void recognition::moveTurret()
 		outdata[i] = servocomm[i];
 	}
 	send_success = SP->WriteData(outdata, servocomm.length());
-	//if (send_success) emit sendConsoleText(QString("Commands successful"));
-	if(!send_success) emit sendConsoleText(QString("Commands failed"));
+	if (send_success) emit sendConsoleText(QString("Commands successful"));
+	else emit sendConsoleText(QString("Commands failed"));
 	for (int i = 0; i < servocomm.length(); i++) {
 		outdata[i] = 0;
 	}
@@ -757,6 +757,10 @@ void recognition::process()
 					{
 						emit sendConsoleText(QString("Shot result = ") + QString::fromStdString(to_string(shot_result)));
 						compData adj = comp->adjust(TiltWord, tilt_increment, tar_dist, shot_result);
+						//DEBUG
+						emit sendConsoleText(QString("current tilt:") + QString::fromStdString(to_string(TiltWord)));
+						emit sendConsoleText(QString("adj Tilt:") + QString::fromStdString(to_string(adj.Tilt)));
+						emit sendConsoleText(QString("adj status:") + QString::fromStdString(to_string(adj.status)));
 						if (adj.status != 0)
 						{
 							TiltWord = adj.Tilt;
@@ -779,13 +783,14 @@ void recognition::process()
 					wait_time = 5;
 					time(&start_time);
 					begin_wait = true;
+					comp->resetDir();
 					//write change back to compensation file while we have time
 					comp->writeback();
 				}
 				//get new frame before continuing after firing
 				capture >> frame;
 				undistort(frame, frame_ud, cameraMatrix, distCoeffs);
-			}
+			} //end firing sequence
 
 			// Convert screencap into HLS from RGB
 			cvtColor(frame_ud, I2, CV_BGR2HLS);
@@ -817,7 +822,7 @@ void recognition::process()
 					//I2.at<uchar>((i*W + j) * 3 + 0)
 					if (hue < 50 || hue > 100
 						|| light < 25 || light > 240
-						|| satu < 30 || satu > 220)
+						|| satu < 30 || satu > 240)
 					{
 						I3.at<uchar>(i, j) = 0;
 					}

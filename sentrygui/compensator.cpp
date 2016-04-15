@@ -265,33 +265,19 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 
 		//add mod to original tilt
 		retVal.Tilt = TiltWord - mod;
-	}
-#if 0
-		//if mod is positive or 0, add to TiltWord (+ -> down), but bound to TILTSIZE
-		if (mod >= 0)
+		//error checking
+		if (retVal.Tilt > TILTSIZE)
 		{
-			retVal.Tilt = TiltWord + mod;
-			if (!(retVal.Tilt < TILTSIZE))
-			{
-				retVal.Tilt = TILTSIZE - 1;
-				retVal.status = 10;
-			}
+			retVal.Tilt = (TILTSIZE - 1);
+			retVal.status = 10;
 		}
-		//if mod is negative, still add the value from TiltWord (- -> up, but bound to 0
-		else
+		if (mod < 0 && abs(mod) > TiltWord)
 		{
-			if (abs(mod) > TiltWord)
-			{
-				retVal.Tilt = 0;
-				retVal.status = 11;
-			}
-			else
-			{
-				retVal.Tilt = TiltWord + mod;
-			}
+			retVal.Tilt = 0;
+			retVal.status = 11;
 		}
 	}
-#endif
+
 	return retVal;
 }
 
@@ -320,13 +306,13 @@ compData compensator::adjust(unsigned int Tilt, double tiltIncr, unsigned int Ra
 		{
 			//move 5 inches up/down on target
 			//compute angle difference
-			newAngle = atan2(13.47, (double)Range) * 180.0 / PI;
+			newAngle = atan2(58.778, (double)Range) * 180.0 / PI;
 		}
 		else if (abs(dir) == 1)
 		{
 			//move 2.5 inches up/down on target
 			//compute angle difference
-			newAngle = atan2((13.47 / 2), (double)Range) * 180.0 / PI;
+			newAngle = atan2((58.778 / 2), (double)Range) * 180.0 / PI;
 		}
 		else
 		{
