@@ -422,14 +422,21 @@ int recognition::calibrate()
 	emit sendCamStatus(QString("Calibrating"));
 	calib_read = readXMLList(outputFilename, cameraMatrix, distCoeffs);
 	if (calib_read) {
-		cout << "Calibration data successfully read from file!" << endl;
-		cout << "Use this calibration or make a new one?";
-		cin >> use_calib;
+		emit sendConsoleText(QString("Calibration data successfully read from file!"));
+		//emit sendConsoleText(QString("Use this calibration or make a new one?"));
+		//while (!calibrationStarted)
+		//{
+			//capture >> frame;
+			//sendFrame(frame);
+			//QCoreApplication::processEvents(0);
+		//}
+		use_calib = true;
 	}
 	else {
 		cout << "Calibration data unsuccessfully read. Please calibrate." << endl;
 		use_calib = false;
 	}
+
 	//Main calibration loop
 	while (!use_calib) {
 		Mat gray_frame;
@@ -483,10 +490,11 @@ int recognition::calibrate()
 		if (char(key) == 27)
 			return 0;
 
-		if (capture.isOpened() && key == 'g')
+		if (capture.isOpened() && calibrationStarted)
 		{
 			mode = CAPTURING;
 			image_points.clear();
+			calibrationStarted = 0;
 		}
 
 		if (mode == CAPTURING && image_points.size() > nframes)

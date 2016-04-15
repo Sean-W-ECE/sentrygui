@@ -228,7 +228,7 @@
     <rect>
      <x>360</x>
      <y>520</y>
-     <width>421</width>
+     <width>474</width>
      <height>35</height>
     </rect>
    </property>
@@ -417,7 +417,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>STOP</string>
+    <string>START</string>
    </property>
   </widget>
   <widget class="QWidget" name="layoutWidget">
@@ -425,8 +425,8 @@
     <rect>
      <x>800</x>
      <y>520</y>
-     <width>301</width>
-     <height>73</height>
+     <width>356</width>
+     <height>101</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">

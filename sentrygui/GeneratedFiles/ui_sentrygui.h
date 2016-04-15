@@ -164,7 +164,7 @@ public:
 
         layoutWidget1 = new QWidget(sentryguiClass);
         layoutWidget1->setObjectName(QStringLiteral("layoutWidget1"));
-        layoutWidget1->setGeometry(QRect(360, 520, 421, 35));
+        layoutWidget1->setGeometry(QRect(360, 520, 474, 35));
         horizontalLayout_2 = new QHBoxLayout(layoutWidget1);
         horizontalLayout_2->setSpacing(6);
         horizontalLayout_2->setContentsMargins(11, 11, 11, 11);
@@ -243,7 +243,7 @@ public:
         stopButton->setGeometry(QRect(230, 520, 112, 34));
         layoutWidget2 = new QWidget(sentryguiClass);
         layoutWidget2->setObjectName(QStringLiteral("layoutWidget2"));
-        layoutWidget2->setGeometry(QRect(800, 520, 301, 73));
+        layoutWidget2->setGeometry(QRect(800, 520, 356, 101));
         gridLayout = new QGridLayout(layoutWidget2);
         gridLayout->setSpacing(6);
         gridLayout->setContentsMargins(11, 11, 11, 11);
@@ -321,7 +321,7 @@ public:
         modeDisplay->setText(QApplication::translate("sentryguiClass", "Auto", 0));
         resetButton->setText(QApplication::translate("sentryguiClass", "RESET", 0));
         calibrateButton->setText(QApplication::translate("sentryguiClass", "CALIBRATE", 0));
-        stopButton->setText(QApplication::translate("sentryguiClass", "STOP", 0));
+        stopButton->setText(QApplication::translate("sentryguiClass", "START", 0));
         feedbackLabel->setText(QApplication::translate("sentryguiClass", "Shot Feedback", 0));
         VeryLow->setText(QApplication::translate("sentryguiClass", "VERY LOW", 0));
         Hit->setText(QApplication::translate("sentryguiClass", "HIT", 0));

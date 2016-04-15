@@ -55,6 +55,8 @@ void sentrygui::setup()
 	connect(this, &sentrygui::targetInit, recog, &recognition::init);
 	//connection for calibration
 	connect(this, &sentrygui::targetCalibrate, recog, &recognition::calibrate);
+	//connect start/stop button to calibration when starting up
+	connect(this, &sentrygui::startCalibration, recog, &recognition::startCalibrate);
 	//connection for starting/stopping autoprocess
 	connect(this, &sentrygui::startProcess, recog, &recognition::process);
 	connect(this, &sentrygui::switchCapture, recog, &recognition::toggleCapture);
@@ -132,23 +134,32 @@ void sentrygui::getInitialized()
 void sentrygui::getCalibration()
 {
 	state = 2;
+	ui.stopButton->setText(QString("STOP"));
 	emit startProcess();
 }
 
 //SLOT: if s is true, set capturing to true, if s is false, capturing = false
 void sentrygui::stopstart()
 {
-	if (capturing == false)
+	//if not calibrated yet, then pressing button will begin calibration
+	if (!calibrated)
 	{
-		capturing = true;
-		ui.stopButton->setText(QString("START"));
-		emit switchCapture(true);
+		//emit startCalibration();
 	}
 	else
 	{
-		capturing = false;
-		ui.stopButton->setText(QString("STOP"));
-		emit switchCapture(false);
+		if (capturing == false)
+		{
+			capturing = true;
+			ui.stopButton->setText(QString("START"));
+			emit switchCapture(true);
+		}
+		else
+		{
+			capturing = false;
+			ui.stopButton->setText(QString("STOP"));
+			emit switchCapture(false);
+		}
 	}
 }
 
