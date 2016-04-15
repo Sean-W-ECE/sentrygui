@@ -22,12 +22,12 @@ bool target_centered = false;
 bool read_range = false;
 bool fire = false;
 //Auto scanning/firing mode indicator
-volatile bool AUTOTURRET = false;
+bool AUTOTURRET = false;
 //result of the shot (high/low/hit)
 int shot_result = 0;
 //waiting for user input after firing if true
 bool input_wait = false;
-QString consoleMessage;
+QString consoleMessage = QString::null;
 
 int cornersH = 6;
 int cornersV = 9;
@@ -541,14 +541,14 @@ void recognition::moveTurret()
 	//add PanWord to serial transmit packet
 	consoleMessage = "PanWord: " + PanWord;
 	emit sendConsoleText(QString(consoleMessage));
-	consoleMessage = QString("");
+	consoleMessage = QString::null;
 	servocomm += to_string(PanWord);
 	servocomm += ",";
 	
 	//add TiltWord to serial transmit packet
 	consoleMessage = "TiltWord: " + TiltWord;
 	emit sendConsoleText(consoleMessage);
-	consoleMessage = QString("");
+	consoleMessage = QString::null;
 	servocomm += to_string(TiltWord);
 	servocomm += ",";
 
@@ -604,6 +604,7 @@ void recognition::process()
 
 	//Auto mode initially true
 	AUTOTURRET = true;
+	haltProcess = false;
 
 	//main scanning function
 	while (!haltProcess) {
@@ -625,6 +626,7 @@ void recognition::process()
 			PanWord = (int)round((double)PanAngle / pan_increment);
 			TiltWord = (int)round((double)TiltAngle / tilt_increment);
 			emit sendConsoleText(QString("Resetting position."));
+			consoleMessage = QString::null;
 			
 			moveTurret();
 
@@ -726,8 +728,8 @@ void recognition::process()
 				if (tilting.status == 0)
 				{
 					//DEBUG
-					emit sendConsoleText(QString("current tilt:") + QString(TiltWord));
-					emit sendConsoleText(QString("comp Tilt:") + QString(tilting.Tilt));
+					emit sendConsoleText(QString("current tilt:") + QString::fromStdString(to_string(TiltWord)));
+					emit sendConsoleText(QString("comp Tilt:") + QString::fromStdString (to_string(tilting.Tilt)));
 					TiltWord = tilting.Tilt;
 				}
 
@@ -753,7 +755,7 @@ void recognition::process()
 					//if not hit, adjust
 					if (shot_result != 0)
 					{
-						emit sendConsoleText(QString("Shot result = ") + QString(shot_result));
+						emit sendConsoleText(QString("Shot result = ") + QString::fromStdString(to_string(shot_result)));
 						compData adj = comp->adjust(TiltWord, tilt_increment, tar_dist, shot_result);
 						if (adj.status != 0)
 						{
@@ -782,6 +784,7 @@ void recognition::process()
 				}
 				//get new frame before continuing after firing
 				capture >> frame;
+				undistort(frame, frame_ud, cameraMatrix, distCoeffs);
 			}
 
 			// Convert screencap into HLS from RGB
@@ -898,15 +901,13 @@ void recognition::process()
 
 					if (frameCount == 30)
 					{
-						consoleMessage = QString("\rTarget found at( %d , %d )").arg(targetpoint.x, targetpoint.y);
+						consoleMessage = QString("\rTarget found at( %0 , %1 )").arg(targetpoint.x, targetpoint.y);
 						emit sendConsoleText(consoleMessage);
-						consoleMessage = QString("");
 					}
 					if (abs(targetpoint.x - view_center.x) < firingTolerance && abs(targetpoint.y - view_center.y) < firingTolerance) {
-						consoleMessage = QString("Camera locked on target at %d , %d!").arg(targetpoint.x, targetpoint.y);
+						consoleMessage = QString("Camera locked on target at %0 , %1!").arg(targetpoint.x, targetpoint.y);
 						if (frameCount == 30) {
 							emit sendConsoleText(consoleMessage);
-							consoleMessage = QString("");
 						}
 						target_centered = true;
 						//store current tilt as the old tilt (for future compensation)
@@ -922,7 +923,6 @@ void recognition::process()
 					if (frameCount == 30)
 					{
 						emit sendConsoleText(QString::fromStdString(msg));
-						consoleMessage = QString("");
 					}
 
 					if (found_points.size()<3)
@@ -977,7 +977,6 @@ void recognition::process()
 				if (frameCount == 30)
 				{
 					emit sendConsoleText(QString("No green objects detected. Target not found..."));
-					consoleMessage = QString("");
 				}
 			}
 
@@ -1021,8 +1020,6 @@ void recognition::process()
 	//Reset position to initial before terminating
 	PanWord = (int)round((double)InitPan / pan_increment);
 	TiltWord = (int)round((double)InitTilt / tilt_increment);
-	emit sendConsoleText(QString("Resetting to initial position before closing."));
-	consoleMessage = QString("");
 	moveTurret();
 
 	return;
@@ -1032,7 +1029,6 @@ void recognition::process()
 void recognition::startCalibrate()
 {
 	emit sendConsoleText(QString("Start calibration"));
-	consoleMessage = QString("");
 	calibrationStarted = 1;
 }
 
@@ -1040,9 +1036,10 @@ void recognition::startCalibrate()
 void recognition::toggleCapture(bool on)
 {
 	if (on)
-		AUTOTURRET = true;
+		AUTOTURRET = true;	
 	else
 		AUTOTURRET = false;
+	emit sendModeStatus(AUTOTURRET);
 }
 
 //terminates the process function
@@ -1054,8 +1051,6 @@ void recognition::endProcess()
 //reset the turret to initial position
 void recognition::reset()
 {
-	emit sendConsoleText(QString("resetting!"));
-	consoleMessage = QString("");
 	resetSentry = true;
 }
 

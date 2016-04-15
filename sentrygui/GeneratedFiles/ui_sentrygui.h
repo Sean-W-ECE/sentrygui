@@ -64,6 +64,7 @@ public:
         if (sentryguiClass->objectName().isEmpty())
             sentryguiClass->setObjectName(QStringLiteral("sentryguiClass"));
         sentryguiClass->resize(1172, 601);
+        sentryguiClass->setFocusPolicy(Qt::ClickFocus);
         layoutWidget = new QWidget(sentryguiClass);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
         layoutWidget->setGeometry(QRect(20, 560, 761, 35));
@@ -318,7 +319,7 @@ public:
         statusLabel->setText(QApplication::translate("sentryguiClass", "Status:", 0));
         statusDisplay->setText(QApplication::translate("sentryguiClass", "Initializing", 0));
         modeLabel->setText(QApplication::translate("sentryguiClass", "Mode:", 0));
-        modeDisplay->setText(QApplication::translate("sentryguiClass", "MANUAL", 0));
+        modeDisplay->setText(QApplication::translate("sentryguiClass", "AUTO", 0));
         resetButton->setText(QApplication::translate("sentryguiClass", "RESET", 0));
         calibrateButton->setText(QApplication::translate("sentryguiClass", "CALIBRATE", 0));
         stopButton->setText(QApplication::translate("sentryguiClass", "STOP", 0));

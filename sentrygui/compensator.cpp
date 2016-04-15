@@ -107,7 +107,7 @@ void compensator::init()
 			{
 				for (int j = 0; j < RANGESIZE; j++)
 				{
-					compensation[i][j] = -20;//std::numeric_limits<float>::quiet_NaN();
+					compensation[i][j] = 20;//std::numeric_limits<float>::quiet_NaN();
 				}
 			}
 		}
@@ -264,7 +264,7 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 			mod = (int)rawVal;
 
 		//add mod to original tilt
-		retVal.Tilt = TiltWord + mod;
+		retVal.Tilt = TiltWord - mod;
 	}
 #if 0
 		//if mod is positive or 0, add to TiltWord (+ -> down), but bound to TILTSIZE

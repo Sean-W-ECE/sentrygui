@@ -62,6 +62,8 @@ public slots:
 	void getCalibration();
 	//handler for STOP/START button
 	void stopstart();
+	//updates the stop/start button and mode displays
+	void updateMode(bool mode);
 	//handle user feedback from GUI buttons
 	void feedbackHandler(QAbstractButton*);
 };

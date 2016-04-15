@@ -10,6 +10,9 @@
     <height>601</height>
    </rect>
   </property>
+  <property name="focusPolicy">
+   <enum>Qt::ClickFocus</enum>
+  </property>
   <property name="windowTitle">
    <string>sentrygui</string>
   </property>
@@ -352,7 +355,7 @@
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>MANUAL</string>
+       <string>AUTO</string>
       </property>
       <property name="readOnly">
        <bool>true</bool>

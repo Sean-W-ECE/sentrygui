@@ -60,6 +60,8 @@ void sentrygui::setup()
 	//connection for starting/stopping autoprocess
 	connect(this, &sentrygui::startProcess, recog, &recognition::process);
 	connect(this, &sentrygui::switchCapture, recog, &recognition::toggleCapture);
+	//back-connection for updating buttons and mode
+	connect(recog, &recognition::sendModeStatus, this, &sentrygui::updateMode);
 
 	/* Startup Signal Chain */
 	//connect init flag
@@ -148,22 +150,36 @@ void sentrygui::stopstart()
 	}
 	else
 	{
+		//if button says STOP, then send stop
 		if (ui.stopButton->text() == QString("STOP"))
 		{
-			capturing = true;
-			ui.stopButton->setText(QString("START"));
-			ui.statusDisplay->setText("Stopped");
-			ui.modeDisplay->setText("MANUAL");
-			emit switchCapture(true);
-		}
-		else
-		{
 			capturing = false;
-			ui.stopButton->setText(QString("STOP"));
-			ui.statusDisplay->setText("Scanning");
-			ui.modeDisplay->setText("AUTO");
 			emit switchCapture(false);
 		}
+		//otherwise send start
+		else
+		{
+			capturing = true;
+			emit switchCapture(true);
+		}
+	}
+}
+
+//updates the stop/start button and mode display with state of the auto turret
+//mode == true, then button->STOP and mode->AUTO
+void sentrygui::updateMode(bool mode)
+{
+	if (mode)
+	{
+		ui.stopButton->setText(QString("STOP"));
+		ui.modeDisplay->setText("AUTO");
+		ui.statusDisplay->setText("Scanning");
+	}
+	else
+	{
+		ui.stopButton->setText(QString("START"));
+		ui.statusDisplay->setText("Stopped");
+		ui.modeDisplay->setText("MANUAL");
 	}
 }
 

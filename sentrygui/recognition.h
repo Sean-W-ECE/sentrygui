@@ -54,6 +54,7 @@ signals:
 	void sendConsoleText(QString text);
 	void sendInit();
 	void sendCalibrated();
+	void sendModeStatus(bool mode);
 	
 public slots:
 	void startCalibrate();
