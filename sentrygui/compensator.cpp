@@ -84,7 +84,7 @@ void compensator::init()
 					catch (const invalid_argument& ia)
 					{
 						//if an invalid argument exception arises, fill in matrix with NAN
-						compensation[i][j] = NAN;
+						compensation[i][j] = 20;// std::numeric_limits<float>::quiet_NaN();
 					}
 					sz2 = sz; //update to compute substring
 					j++; //next column
@@ -102,7 +102,7 @@ void compensator::init()
 			{
 				for (int j = 0; j < RANGESIZE; j++)
 				{
-					compensation[i][j] = 20;
+					compensation[i][j] = -20;//std::numeric_limits<float>::quiet_NaN();
 				}
 			}
 		}
@@ -163,6 +163,7 @@ int compensator::writeback()
 // estimate a value for an uninitialized compensation angle
 int compensator::interpolate(int TiltWord, int roundrange)
 {
+	int mod;
 	int nearest[4];
 	int i = -1;
 	// Find nearest neighbor to the left
@@ -219,7 +220,8 @@ int compensator::interpolate(int TiltWord, int roundrange)
 			denum += 1 / abs(roundrange - nearest[i]);
 		}
 	}
-	int mod = (int)num / denum;
+	if (denum = 0) mod = 0;
+	else mod = (int)num / denum;
 	return mod;
 }
 
@@ -289,3 +291,8 @@ void compensator::update(float newCompVal, unsigned int tilt, unsigned int range
 {
 	compensation[tilt][range] = newCompVal;
 }
+
+/*
+   comp angle (big changes) = arctan(13.47 / range) 
+   comp angle (small changes) = arctan((13.47 / 2) / range)
+*/

@@ -32,7 +32,7 @@ public:
 	recognition(QObject *parent);
 	~recognition();
 	void init();
-	void calibrate();
+	int calibrate();
 
 private:
 	cv::Mat frame;

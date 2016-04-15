@@ -5,7 +5,7 @@ using namespace cv;
 using namespace std;
 
 #define SCANINCREMENT 30
-#define RFIND_BYTES 7
+#define RFIND_BYTES 6
 
 char key;
 int thresh = 127;
@@ -279,8 +279,9 @@ static bool readXMLList(const string& filename,
 	if (!fs.isOpened())
 		return false;
 	FileNode n = fs.getFirstTopLevelNode();
-	if (n.type() != FileNode::SEQ)
-		return false;
+	//cout << "n.type(): " << n.type() << endl;
+	//if (n.type() != FileNode::SEQ)
+	//return false;
 	//fs["image_points"] >> imagePoints;
 	fs["camera_matrix"] >> cameraMatrix;
 	fs["distortion_coefficients"] >> distCoeffs;
@@ -381,7 +382,7 @@ void recognition::init()
 }
 
 /*Performs calibration of the turret and camera*/
-void recognition::calibrate()
+int recognition::calibrate()
 {
 	/*Calibration Variables*/
 	const string outputFilename = "calibration.xml";
@@ -389,6 +390,8 @@ void recognition::calibrate()
 	int H, W, i, j;
 	int mode = DETECTION;
 	int delay = 10;
+	bool calib_read = false;
+	bool use_calib = false;
 	clock_t prevTimestamp = 0;
 
 	vector<vector<Point3f>> cb_points;
@@ -417,9 +420,18 @@ void recognition::calibrate()
 	//run calibration routine.
 	//tell UI cam is calibrating
 	emit sendCamStatus(QString("Calibrating"));
-
+	calib_read = readXMLList(outputFilename, cameraMatrix, distCoeffs);
+	if (calib_read) {
+		cout << "Calibration data successfully read from file!" << endl;
+		cout << "Use this calibration or make a new one?";
+		cin >> use_calib;
+	}
+	else {
+		cout << "Calibration data unsuccessfully read. Please calibrate." << endl;
+		use_calib = false;
+	}
 	//Main calibration loop
-	while (1) {
+	while (!use_calib) {
 		Mat gray_frame;
 		vector<Point2f> corners;
 		bool blink = false;
@@ -467,11 +479,14 @@ void recognition::calibrate()
 		sendFrame(frame);
 
 		//start calibration from button press
-		if (capture.isOpened() && calibrationStarted == 1)
+		key = cvWaitKey(50);
+		if (char(key) == 27)
+			return 0;
+
+		if (capture.isOpened() && key == 'g')
 		{
 			mode = CAPTURING;
 			image_points.clear();
-			calibrationStarted = 0;
 		}
 
 		if (mode == CAPTURING && image_points.size() > nframes)
@@ -494,7 +509,6 @@ void recognition::calibrate()
 			//Sleep(3000);
 			break;
 		}
-
 	}
 	emit sendConsoleText(QString("Camera calibrated and calibration information saved."));
 	string msg = "Camera calibrated and calibration information saved.";
@@ -508,6 +522,7 @@ void recognition::calibrate()
 	calibrationMatrixValues(cameraMatrix, imsize, aperH, aperW, hfov, vfov, focalLength, princiPoint, aspectRatio);
 	//alert GUI that calibration complete
 	emit sendCalibrated();
+	return 1;
 }
 
 //Builds the serial packet and sends it to Arduino
@@ -518,12 +533,14 @@ void recognition::moveTurret()
 	//add PanWord to serial transmit packet
 	consoleMessage = "PanWord: " + PanWord;
 	emit sendConsoleText(QString(consoleMessage));
+	consoleMessage = QString("");
 	servocomm += to_string(PanWord);
 	servocomm += ",";
 	
 	//add TiltWord to serial transmit packet
 	consoleMessage = "TiltWord: " + TiltWord;
 	emit sendConsoleText(consoleMessage);
+	consoleMessage = QString("");
 	servocomm += to_string(TiltWord);
 	servocomm += ",";
 
@@ -558,12 +575,14 @@ void recognition::process()
 	int inc = 1;
 	bool send_success;
 	bool begin_wait = false;
-	int wait_time = 3; //default wait 3 seconds between movements
+	int wait_time = 6; //default wait 6 seconds between movements
 	target_found = false;
 	target_centered = false;
-	
 
 	int frameCount = 0;
+
+	int Test_PanWord = PanWord;
+	int Test_TiltWord = TiltWord;
 
 	vector<Point> found_points;
 	int counts = 0;
@@ -650,7 +669,7 @@ void recognition::process()
 
 				//Receive data from serial
 				for (reads = 0; reads < 1; reads++) {
-					Sleep(1000);
+					Sleep(2000);
 
 					// Now Arduino will read the distance from the sensor
 					// and return it.
@@ -708,9 +727,15 @@ void recognition::process()
 
 				//set user input wait flag
 				input_wait = true;
+				emit sendConsoleText(QString("Waiting for input"));
 				//wait for input to set it to false
 				while (input_wait)
+				{
+					//send image
+					capture >> frame;
+					sendFrame(frame);
 					QCoreApplication::processEvents(0); //process events
+				}
 				//after waiting over, check shot result
 				switch (shot_result)
 				{
@@ -765,8 +790,8 @@ void recognition::process()
 					uchar light = hls.val[1];
 					uchar satu = hls.val[2];
 					//I2.at<uchar>((i*W + j) * 3 + 0)
-					if (hue < 50 || hue > 90
-						|| light < 25 || light > 200
+					if (hue < 50 || hue > 100
+						|| light < 25 || light > 240
 						|| satu < 30 || satu > 220)
 					{
 						I3.at<uchar>(i, j) = 0;
@@ -851,31 +876,23 @@ void recognition::process()
 
 					if (frameCount == 30)
 					{
-						consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x, targetpoint.y);
+						consoleMessage = QString("\rTarget found at( %d , %d )").arg(targetpoint.x, targetpoint.y);
 						emit sendConsoleText(consoleMessage);
+						consoleMessage = QString("");
 					}
 					if (abs(targetpoint.x - view_center.x) < firingTolerance && abs(targetpoint.y - view_center.y) < firingTolerance) {
-						consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
-						if (frameCount == 30) emit sendConsoleText(consoleMessage);
+						consoleMessage = QString("Camera locked on target at %d , %d!").arg(targetpoint.x, targetpoint.y);
+						if (frameCount == 30) {
+							emit sendConsoleText(consoleMessage);
+							consoleMessage = QString("");
+						}
 						target_centered = true;
 						//store current tilt as the old tilt (for future compensation)
 						OldTilt = TiltWord;
 					}
 					else target_centered = false;
 
-					//target_confirmed_points = targetpoint;
-					NewPanDelta = thetapPxW*round(view_center.x - targetpoint.x);
-					NewTiltDelta = thetapPxH*round(view_center.y - targetpoint.y);
-					if (!begin_wait) {
-						NewPanAngle = (PanAngle + NewPanDelta);
-						PanWord = (int)round((double)NewPanAngle / pan_increment);
-						NewTiltAngle = (TiltAngle + NewTiltDelta);
-						TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-
-						//begin_wait = true;
-					}
-
-					string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
+					string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", NewPanAngle, Test_PanWord, NewTiltAngle, Test_TiltWord);
 					int baseLine = 0;
 					Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 					Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
@@ -883,6 +900,7 @@ void recognition::process()
 					if (frameCount == 30)
 					{
 						emit sendConsoleText(QString::fromStdString(msg));
+						consoleMessage = QString("");
 					}
 
 					if (found_points.size()<3)
@@ -898,16 +916,16 @@ void recognition::process()
 									target_confirmed_points = found_points[i];
 									NewPanDelta = thetapPxW*round(target_confirmed_points.x - view_center.x);
 									NewTiltDelta = thetapPxH*round(target_confirmed_points.y - view_center.y);
-									if (!begin_wait) {
-										NewPanAngle = (PanAngle + NewPanDelta);
-										PanWord = (int)round((double)NewPanAngle / pan_increment);
-										NewTiltAngle = (TiltAngle + NewTiltDelta);
-										TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
-										time(&start_time);
-										//begin_wait = true;
-									}
+									
+									NewPanAngle = (PanAngle + NewPanDelta);
+									Test_PanWord = (int)round((double)NewPanAngle / pan_increment);
+									NewTiltAngle = (TiltAngle + NewTiltDelta);
+									Test_TiltWord = (int)round((double)NewTiltAngle / tilt_increment);
+									//time(&start_time);
+									//begin_wait = true;
+									
 
-									string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", PanAngle, PanWord, TiltAngle, TiltWord);
+									string msg = format("New pan angle: %f (%d), New Tilt Angle: %f (%d)", NewPanAngle, Test_PanWord, NewTiltAngle, Test_TiltWord);
 									int baseLine = 0;
 									Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 									Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
@@ -917,12 +935,14 @@ void recognition::process()
 									break;
 								}
 							}
-							if (counts >= 3) {
+							if (target_found) {
 								found_points.clear();
 								counts = 0;
 								break;
 							}
 						}
+						found_points.clear();
+						counts = 0;
 					}
 				}
 				// Otherwise, say no target was found
@@ -935,6 +955,7 @@ void recognition::process()
 				if (frameCount == 30)
 				{
 					emit sendConsoleText(QString("No green objects detected. Target not found..."));
+					consoleMessage = QString("");
 				}
 			}
 
@@ -947,18 +968,22 @@ void recognition::process()
 						inc = -1 * inc;
 					sector += inc;
 					PanAngle = sector*SCANINCREMENT;
-					PanWord = PanAngle / pan_increment;
+					PanWord = (int)PanAngle / pan_increment;
+					TiltWord = 512;
+					wait_time = 6;
+				}
+				else
+				{
+					wait_time = (int)max(abs(PanAngle - NewPanAngle) / 16, abs(TiltAngle - NewTiltAngle) / 16) + 4;
+					PanAngle = (double)NewPanAngle;//PanWord*pan_increment;
+					TiltAngle = (double)NewTiltAngle;//TiltWord*tilt_increment;
+					PanWord = (int)round((double)PanAngle / pan_increment);
+					TiltWord = (int)round((double)TiltAngle / pan_increment);
 				}
 				//send instructions to turret
 				moveTurret();
 
-				//if target was found, update angles
-				if (target_found == true)
-				{
-					PanAngle = (double)PanWord*pan_increment;
-					TiltAngle = (double)TiltWord*tilt_increment;
-				}
-				wait_time = 3; //resets wait time to 3 seconds
+				//start waiting
 				time(&start_time);
 				begin_wait = true;
 			}
@@ -974,8 +999,8 @@ void recognition::process()
 	//Reset position to initial before terminating
 	PanWord = (int)round((double)InitPan / pan_increment);
 	TiltWord = (int)round((double)InitTilt / tilt_increment);
-	cout << "Initializing position." << endl;
-	emit sendConsoleText(QString("Initializing position."));
+	emit sendConsoleText(QString("Resetting to initial position before closing."));
+	consoleMessage = QString("");
 	moveTurret();
 
 	return;
@@ -985,6 +1010,7 @@ void recognition::process()
 void recognition::startCalibrate()
 {
 	emit sendConsoleText(QString("Start calibration"));
+	consoleMessage = QString("");
 	calibrationStarted = 1;
 }
 
@@ -1007,6 +1033,7 @@ void recognition::endProcess()
 void recognition::reset()
 {
 	emit sendConsoleText(QString("resetting!"));
+	consoleMessage = QString("");
 	resetSentry = true;
 }
 
