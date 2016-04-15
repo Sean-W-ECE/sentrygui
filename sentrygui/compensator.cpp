@@ -263,7 +263,11 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 		else
 			mod = (int)rawVal;
 
-		//if mod is positive or 0, add to TiltWord, but bound to TILTSIZE
+		//add mod to original tilt
+		retVal.Tilt = TiltWord + mod;
+	}
+#if 0
+		//if mod is positive or 0, add to TiltWord (+ -> down), but bound to TILTSIZE
 		if (mod >= 0)
 		{
 			retVal.Tilt = TiltWord + mod;
@@ -273,21 +277,21 @@ compData compensator::compensate(unsigned int TiltWord, unsigned int Range)
 				retVal.status = 10;
 			}
 		}
-		//if mod is negative, subtract the abs value from TiltWord, but bound to 0
+		//if mod is negative, still add the value from TiltWord (- -> up, but bound to 0
 		else
 		{
-			mod = abs(mod);
-			if (mod > TiltWord)
+			if (abs(mod) > TiltWord)
 			{
 				retVal.Tilt = 0;
 				retVal.status = 11;
 			}
 			else
 			{
-				retVal.Tilt = TiltWord - mod;
+				retVal.Tilt = TiltWord + mod;
 			}
 		}
 	}
+#endif
 	return retVal;
 }
 

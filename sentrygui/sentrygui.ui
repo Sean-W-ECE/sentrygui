@@ -352,7 +352,7 @@
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>Auto</string>
+       <string>MANUAL</string>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -417,7 +417,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>START</string>
+    <string>STOP</string>
    </property>
   </widget>
   <widget class="QWidget" name="layoutWidget">

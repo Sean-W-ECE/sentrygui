@@ -318,10 +318,10 @@ public:
         statusLabel->setText(QApplication::translate("sentryguiClass", "Status:", 0));
         statusDisplay->setText(QApplication::translate("sentryguiClass", "Initializing", 0));
         modeLabel->setText(QApplication::translate("sentryguiClass", "Mode:", 0));
-        modeDisplay->setText(QApplication::translate("sentryguiClass", "Auto", 0));
+        modeDisplay->setText(QApplication::translate("sentryguiClass", "MANUAL", 0));
         resetButton->setText(QApplication::translate("sentryguiClass", "RESET", 0));
         calibrateButton->setText(QApplication::translate("sentryguiClass", "CALIBRATE", 0));
-        stopButton->setText(QApplication::translate("sentryguiClass", "START", 0));
+        stopButton->setText(QApplication::translate("sentryguiClass", "STOP", 0));
         feedbackLabel->setText(QApplication::translate("sentryguiClass", "Shot Feedback", 0));
         VeryLow->setText(QApplication::translate("sentryguiClass", "VERY LOW", 0));
         Hit->setText(QApplication::translate("sentryguiClass", "HIT", 0));

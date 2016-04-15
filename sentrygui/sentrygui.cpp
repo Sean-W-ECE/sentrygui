@@ -4,7 +4,7 @@
 #include <QGraphicsPixmapItem>
 
 bool initialized = false;
-bool calibrated = false;
+bool calibrated = true; //temp value, should reset to false
 bool capturing = false;
 
 sentrygui::sentrygui(QWidget *parent)
@@ -148,16 +148,20 @@ void sentrygui::stopstart()
 	}
 	else
 	{
-		if (capturing == false)
+		if (ui.stopButton->text() == QString("STOP"))
 		{
 			capturing = true;
 			ui.stopButton->setText(QString("START"));
+			ui.statusDisplay->setText("Stopped");
+			ui.modeDisplay->setText("MANUAL");
 			emit switchCapture(true);
 		}
 		else
 		{
 			capturing = false;
 			ui.stopButton->setText(QString("STOP"));
+			ui.statusDisplay->setText("Scanning");
+			ui.modeDisplay->setText("AUTO");
 			emit switchCapture(false);
 		}
 	}
