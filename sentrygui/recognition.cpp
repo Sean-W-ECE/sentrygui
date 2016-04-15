@@ -974,7 +974,7 @@ void recognition::process()
 				}
 				else
 				{
-					wait_time = (int)max(abs(PanAngle - NewPanAngle) / 16, abs(TiltAngle - NewTiltAngle) / 16) + 4;
+					wait_time = (int)max(abs(PanAngle - NewPanAngle) / 12, abs(TiltAngle - NewTiltAngle) / 12) + 4;
 					PanAngle = (double)NewPanAngle;//PanWord*pan_increment;
 					TiltAngle = (double)NewTiltAngle;//TiltWord*tilt_increment;
 					PanWord = (int)round((double)PanAngle / pan_increment);

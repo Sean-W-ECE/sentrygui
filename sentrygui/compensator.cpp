@@ -10,6 +10,10 @@ using namespace std;
 fstream srcFile;
 //filename for compensation matrix data
 string filename = "compensation.txt";
+//int that records the last adjustment direction
+int lastDir = 0;
+//last adjustment angle
+double lastAdj = 0;
 
 compensator::compensator()
 {
@@ -305,76 +309,85 @@ compData compensator::adjust(unsigned int Tilt, double tiltIncr, unsigned int Ra
 	double newAngle;
 	unsigned int newTilt;
 
-	//Very High
-	if (dir == 2)
+	if (lastDir == 0)
 	{
-		//move 5 inches down on target
-		//compute angle difference
-		newAngle = atan2(13.47, (double)Range) * 180.0 / PI;
-		newTilt = (int)round((double)newTilt / tiltIncr);
-		//add newTilt from original tilt to make gun go down
-		retVal.Tilt = Tilt + newTilt;
-		//check for out of bounds
-		if (!(retVal.Tilt < TILTSIZE))
+		//Very High
+		if (abs(dir) >= 2)
 		{
-			retVal.Tilt = TILTSIZE - 1;
-			retVal.status = 10;
+			//move 5 inches up/down on target
+			//compute angle difference
+			newAngle = atan2(13.47, (double)Range) * 180.0 / PI;
+		}
+		else if (abs(dir) == 1)
+		{
+			//move 2.5 inches up/down on target
+			//compute angle difference
+			newAngle = atan2((13.47 / 2), (double)Range) * 180.0 / PI;
+		}
+		else
+		{
+			newAngle = 0.0;
 		}
 	}
-	//High
-	else if (dir == 1)
-	{
-		//move 2.5 inches down on target
-		//compute angle difference
-		newAngle = atan2((13.47/2), (double)Range) * 180.0 / PI;
-		newTilt = (int)round((double)newTilt / tiltIncr);
-		//add newTilt from original tilt to make gun go down
-		retVal.Tilt = Tilt + newTilt;
-		//check for out of bounds
-		if (!(retVal.Tilt < TILTSIZE))
-		{
-			retVal.Tilt = TILTSIZE - 1;
-			retVal.status = 10;
-		}
-	}
-	//Low
-	else if (dir == -1)
-	{
-		//move 2.5 inches up on target
-		//compute angle difference
-		newAngle = atan2((13.47 / 2), (double)Range) * 180.0 / PI;
-		newTilt = (int)round((double)newTilt / tiltIncr);
-		//subtract newTilt from original tilt to make gun go up
-		retVal.Tilt = Tilt - newTilt;
-		//check for out of bounds
-		if (newTilt > Tilt)
-		{
-			retVal.Tilt = 0;
-			retVal.status = 11;
-		}
-	}
-	//Very Low
-	else if (dir == -2)
-	{
-		//move 5 inches up on target
-		//compute angle difference
-		newAngle = atan2(13.47, (double)Range) * 180.0 / PI;
-		newTilt = (int)round((double)newTilt / tiltIncr);
-		//subtract newTilt from original tilt to make gun go up
-		retVal.Tilt = Tilt - newTilt;
-		//check for out of bounds
-		if (newTilt > Tilt)
-		{
-			retVal.Tilt = 0;
-			retVal.status = 11;
-		}
-	}
-	//error
+	//otherwise, use lastAdj as basis for future adjustments
 	else
 	{
-		retVal.Tilt = Tilt;
+		//every time directions switch, divide tilt by 2
+		//if same direction as before, divide tilt by 2 if dir lower in magnitude
+		if (!samesgn(dir, lastDir) || (abs(dir) < abs(lastDir)))
+			newAngle = lastAdj / 2.0;
+		else
+			newAngle = lastAdj; //same direction & magnitude: keep angle same
 	}
+
+	//convert angle to word
+	newTilt = (int)round((double)newAngle / tiltIncr);
+
+	//move turret according to dir (<0 = sub, >0 = add)
+	if (dir < 0)
+	{
+		//subtract newTilt from original tilt to make gun go up
+		retVal.Tilt = Tilt - newTilt;
+		//check for out of bounds
+		if (newTilt > Tilt)
+		{
+			retVal.Tilt = 0;
+			retVal.status = 11;
+		}
+	}
+	if (dir > 0)
+	{
+		//add newTilt from original tilt to make gun go down
+		retVal.Tilt = Tilt + newTilt;
+		//check for out of bounds
+		if (!(retVal.Tilt < TILTSIZE))
+		{
+			retVal.Tilt = TILTSIZE - 1;
+			retVal.status = 10;
+		}
+	}
+	
+	//update lastDir and lastAdj
+	lastDir = dir;
+	lastAdj = newAngle;
 
 	//return 
 	return retVal;
+}
+
+//returns if 2 numbers have the same sign
+//return 1 if same, 0 if different
+int compensator::samesgn(int v1, int v2)
+{
+	int v1sign = (0 < v1) - (v1 < 0);
+	int v2sign = (0 < v2) - (v2 < 0);
+
+	return (v1sign == v2sign);
+}
+
+//reset the lastDir and lastAdj. Called from recognition
+void compensator::resetDir()
+{
+	lastDir = 0;
+	lastAdj = 0;
 }
