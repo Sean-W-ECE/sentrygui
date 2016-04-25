@@ -51,8 +51,8 @@ volatile unsigned int TiltWord = 512;
 //old tilt word used for recording compensation values
 unsigned int OldTilt = TiltWord;
 //initial tilt
-double InitTilt = TiltAngle;
-double InitPan = PanAngle;
+double InitTilt = 90.0;
+double InitPan = 90.0;
 
 //firing tolerance: how close camera has to be to target before gun fires
 int firingTolerance = 6;
@@ -616,7 +616,7 @@ void recognition::process()
 			PanAngle = InitPan;
 			TiltAngle = InitTilt;
 			inc = 1;
-			sector = 6;
+			sector = 3;
 			fire = false;
 			target_centered = false;
 			target_found = false;
