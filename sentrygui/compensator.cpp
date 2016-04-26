@@ -107,7 +107,7 @@ void compensator::init()
 			{
 				for (int j = 0; j < RANGESIZE; j++)
 				{
-					compensation[i][j] = 20;//std::numeric_limits<float>::quiet_NaN();
+					compensation[i][j] = 0;//std::numeric_limits<float>::quiet_NaN();
 				}
 			}
 		}
