@@ -602,6 +602,10 @@ void recognition::process()
 
 	time(&start_time);
 
+	//send initial position to GUI display
+	emit sendTurret(InitTilt, InitPan, true);
+	emit sendRange(0, 0);
+
 	//Auto mode initially true
 	AUTOTURRET = true;
 	haltProcess = false;
@@ -636,6 +640,9 @@ void recognition::process()
 			wait_time = 6;
 			time(&start_time);
 			begin_wait = true;
+			//send initial position to GUI display
+			emit sendTurret(InitTilt, InitPan, true);
+			emit sendRange(0, 0);
 		}
 
 		time(&end_time);
@@ -677,6 +684,9 @@ void recognition::process()
 
 				moveTurret();
 
+				//send updated position to GUI display
+				emit sendTurret(TiltAngle, PanAngle, target_found);
+
 				//Receive data from serial
 				for (reads = 0; reads < 1; reads++) {
 					Sleep(2000);
@@ -698,6 +708,7 @@ void recognition::process()
 						emit sendConsoleText(QString("Distance read not successful!"));
 					Sleep(700);
 
+					int validRange = 0;
 					// Due to the issue mentioned above, the program will only
 					// keep the first value returned through serial.
 					if (reads == 0) {
@@ -706,21 +717,26 @@ void recognition::process()
 						try
 						{
 							tar_dist = stol(dist, NULL, 10);
+							validRange = 1; //successful read -> update UI
 						}
 						catch (const invalid_argument& ia)
 						{
 							emit sendConsoleText(QString("Error: invalid argument for distance"));
 							tar_dist = 0;
+							validRange = -1; //invalid read
 						}
 						catch (const out_of_range& ora)
 						{
 							emit sendConsoleText(QString("Error: distance out of range"));
 							tar_dist = 0;
+							validRange = -1; //invalid read
 						}
 						consoleMessage = "Distance taken: " + tar_dist;
 						emit sendConsoleText(consoleMessage);
 					}
 					dist = "";
+					//update range on GUI
+					emit sendRange(tar_dist, validRange);
 				}
 
 				//get new tilt from compensation
@@ -730,7 +746,9 @@ void recognition::process()
 					//DEBUG
 					emit sendConsoleText(QString("current tilt:") + QString::fromStdString(to_string(TiltWord)));
 					emit sendConsoleText(QString("comp Tilt:") + QString::fromStdString (to_string(tilting.Tilt)));
+					//update tilt word and tilt angle
 					TiltWord = tilting.Tilt;
+					TiltAngle = TiltWord * tilt_increment;
 				}
 
 				//loop to fire and wait for input until hit
@@ -740,6 +758,9 @@ void recognition::process()
 					fire = true;
 					emit sendCamStatus(QString("Firing!"));
 					moveTurret();
+
+					//send updated position to GUI display
+					emit sendTurret(TiltAngle, PanAngle, target_found);
 
 					//send image
 					capture >> frame;
@@ -768,6 +789,7 @@ void recognition::process()
 						if (adj.status == 0)
 						{
 							TiltWord = adj.Tilt;
+							TiltAngle = TiltWord * tilt_increment;
 							emit sendConsoleText(QString("final tilt:") + QString::fromStdString(to_string(TiltWord)));
 						}
 
@@ -999,6 +1021,7 @@ void recognition::process()
 					PanAngle = sector*SCANINCREMENT;
 					PanWord = (int)PanAngle / pan_increment;
 					TiltWord = 512;
+					TiltAngle = TiltWord * tilt_increment;
 					wait_time = 6;
 				}
 				else
@@ -1007,7 +1030,7 @@ void recognition::process()
 					PanAngle = (double)NewPanAngle;//PanWord*pan_increment;
 					TiltAngle = (double)NewTiltAngle;//TiltWord*tilt_increment;
 					PanWord = (int)round((double)PanAngle / pan_increment);
-					TiltWord = (int)round((double)TiltAngle / pan_increment);
+					TiltWord = (int)round((double)TiltAngle / tilt_increment);
 				}
 				//send instructions to turret
 				moveTurret();
@@ -1015,6 +1038,9 @@ void recognition::process()
 				//start waiting
 				time(&start_time);
 				begin_wait = true;
+
+				//send updated position to GUI display
+				emit sendTurret(TiltAngle, PanAngle, target_found);
 			}
 		} //End of AUTOTURRET section
 

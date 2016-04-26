@@ -10,6 +10,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
 #include <opencv/cv.hpp>
+#include <string.h>
+#include <stdlib.h>
 
 class sentrygui : public QWidget
 {
@@ -66,6 +68,10 @@ public slots:
 	void updateMode(bool mode);
 	//handle user feedback from GUI buttons
 	void feedbackHandler(QAbstractButton*);
+	//update UI displays for turret position
+	void updateTurret(double tilt, double pan, bool linked);
+	//update range
+	void updateRange(unsigned int r, int valid);
 };
 
 #endif // SENTRYGUI_H

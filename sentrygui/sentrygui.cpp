@@ -62,6 +62,8 @@ void sentrygui::setup()
 	connect(this, &sentrygui::switchCapture, recog, &recognition::toggleCapture);
 	//back-connection for updating buttons and mode
 	connect(recog, &recognition::sendModeStatus, this, &sentrygui::updateMode);
+	//connection to update UI turret displays
+	connect(recog, &recognition::sendTurret, this, &sentrygui::updateTurret);
 
 	/* Startup Signal Chain */
 	//connect init flag
@@ -179,7 +181,7 @@ void sentrygui::updateMode(bool mode)
 	{
 		ui.stopButton->setText(QString("START"));
 		ui.statusDisplay->setText("Stopped");
-		ui.modeDisplay->setText("MANUAL");
+		ui.modeDisplay->setText("IDLE");
 	}
 }
 
@@ -219,4 +221,34 @@ void sentrygui::feedbackHandler(QAbstractButton* qb)
 		//send 2 to recog shotFeedback
 		emit shotFeedback(2);
 	}
+}
+
+//SLOT: update turret position displays
+void sentrygui::updateTurret(double tilt, double pan, bool linked)
+{
+	//convert floats to QStrings
+	QString tiltString = QString::fromStdString(std::to_string(tilt));
+	QString panString = QString::fromStdString(std::to_string(pan));
+	
+	//update Pitch display with tilt
+	ui.camVDisplay->setText(tiltString);
+	//update camera with pan
+	ui.camHDisplay->setText(panString);
+	//if linked, then update turret with pan
+	if (linked)
+		ui.turretHDisplay->setText(panString);
+}
+
+//SLOT: update range when valid
+void sentrygui::updateRange(unsigned int r, int valid)
+{
+	//1 means normal range
+	if (valid == 1)
+		ui.rangeDisplay->setText(QString::fromStdString (std::to_string(r)) + QString(" cm"));
+	//error reading range
+	else if (valid == -1)
+		ui.rangeDisplay->setText(QString("Range Error"));
+	//no range to report
+	else
+		ui.rangeDisplay->setText(QString("-"));
 }

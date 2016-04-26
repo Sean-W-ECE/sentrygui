@@ -55,6 +55,8 @@ signals:
 	void sendInit();
 	void sendCalibrated();
 	void sendModeStatus(bool mode);
+	void sendTurret(double tilt, double pan, bool linked);
+	void sendRange(unsigned int r, int valid);
 	
 public slots:
 	void startCalibrate();
