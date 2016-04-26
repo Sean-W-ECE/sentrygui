@@ -100,7 +100,7 @@ void compensator::init()
 			//close file when done reading
 			srcFile.close();
 		}
-		//file not found, init matrix to NAN
+		//file not found, init matrix to 0, then create the file
 		else
 		{
 			for (int i = 0; i < TILTSIZE; i++)
@@ -110,6 +110,7 @@ void compensator::init()
 					compensation[i][j] = 0;//std::numeric_limits<float>::quiet_NaN();
 				}
 			}
+			writeback();
 		}
 	}
 }

@@ -336,9 +336,6 @@ void recognition::init()
 	//create and init compensator
 	comp = new compensator();
 	comp->init();
-	//DEBUG: writeback file
-	//int compRet = comp->writeback();
-	//emit sendConsoleText(QString("compret=%1").arg(compRet));
 
 	//initializes serial connection
 	SP = new Serial(_T(L"COM4"));
