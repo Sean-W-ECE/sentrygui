@@ -765,7 +765,7 @@ void recognition::process()
 
 					//set user input wait flag
 					input_wait = true;
-					emit sendConsoleText(QString("Waiting for input"));
+					emit sendCamStatus(QString("Waiting for input"));
 					//wait for input to set it to false
 					while (input_wait)
 					{
@@ -782,7 +782,6 @@ void recognition::process()
 						//DEBUG
 						emit sendConsoleText(QString("current tilt:") + QString::fromStdString(to_string(TiltWord)));
 						emit sendConsoleText(QString("adj Tilt:") + QString::fromStdString(to_string(adj.Tilt)));
-						emit sendConsoleText(QString("adj status:") + QString::fromStdString(to_string(adj.status)));
 						if (adj.status == 0)
 						{
 							TiltWord = adj.Tilt;
@@ -926,16 +925,16 @@ void recognition::process()
 					targetpoint.y = (int)centerfin.y;
 					circle(frame, targetpoint, 4, (0, 0, 255), -1);
 
-					if (frameCount == 30)
+					/*if (frameCount == 30)
 					{
-						consoleMessage = QString("\rTarget found at( %0 , %1 )").arg(targetpoint.x, targetpoint.y);
+						consoleMessage = QString("\rTarget found at( %1 , %2 )").arg(targetpoint.x, targetpoint.y);
 						emit sendConsoleText(consoleMessage);
-					}
+					}*/
 					if (abs(targetpoint.x - view_center.x) < firingTolerance && abs(targetpoint.y - view_center.y) < firingTolerance) {
-						consoleMessage = QString("Camera locked on target at %0 , %1!").arg(targetpoint.x, targetpoint.y);
-						if (frameCount == 30) {
+						consoleMessage = QString("Camera locked on target at %1 , %2!").arg(targetpoint.x, targetpoint.y);
+						/*if (frameCount == 30) {
 							emit sendConsoleText(consoleMessage);
-						}
+						}*/
 						target_centered = true;
 						//store current tilt as the old tilt (for future compensation)
 						OldTilt = TiltWord;
@@ -947,10 +946,10 @@ void recognition::process()
 					Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 					Point textOrigin(frame.cols - 2 * textSize.width + 500, frame.rows - 2 * baseLine - 10);
 					putText(frame, msg, textOrigin, 1, 1, Scalar(0, 255, 0));
-					if (frameCount == 30)
+					/*if (frameCount == 30)
 					{
 						emit sendConsoleText(QString::fromStdString(msg));
-					}
+					}*/
 
 					if (found_points.size()<3)
 						found_points.push_back(targetpoint);

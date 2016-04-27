@@ -63,11 +63,11 @@ public:
     {
         if (sentryguiClass->objectName().isEmpty())
             sentryguiClass->setObjectName(QStringLiteral("sentryguiClass"));
-        sentryguiClass->resize(1229, 566);
+        sentryguiClass->resize(1332, 559);
         sentryguiClass->setFocusPolicy(Qt::ClickFocus);
         layoutWidget = new QWidget(sentryguiClass);
         layoutWidget->setObjectName(QStringLiteral("layoutWidget"));
-        layoutWidget->setGeometry(QRect(10, 520, 661, 35));
+        layoutWidget->setGeometry(QRect(10, 510, 821, 35));
         horizontalLayout = new QHBoxLayout(layoutWidget);
         horizontalLayout->setSpacing(6);
         horizontalLayout->setContentsMargins(11, 11, 11, 11);
@@ -94,6 +94,8 @@ public:
         camVDisplay->setFont(font);
         camVDisplay->setMouseTracking(false);
         camVDisplay->setAcceptDrops(false);
+        camVDisplay->setLayoutDirection(Qt::LeftToRight);
+        camVDisplay->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         camVDisplay->setReadOnly(true);
 
         horizontalLayout->addWidget(camVDisplay);
@@ -165,7 +167,7 @@ public:
 
         layoutWidget1 = new QWidget(sentryguiClass);
         layoutWidget1->setObjectName(QStringLiteral("layoutWidget1"));
-        layoutWidget1->setGeometry(QRect(700, 520, 391, 35));
+        layoutWidget1->setGeometry(QRect(840, 510, 474, 35));
         horizontalLayout_2 = new QHBoxLayout(layoutWidget1);
         horizontalLayout_2->setSpacing(6);
         horizontalLayout_2->setContentsMargins(11, 11, 11, 11);
@@ -229,22 +231,22 @@ public:
 
         camView = new QGraphicsView(sentryguiClass);
         camView->setObjectName(QStringLiteral("camView"));
-        camView->setGeometry(QRect(10, 10, 661, 501));
+        camView->setGeometry(QRect(50, 10, 650, 490));
         console = new QTextEdit(sentryguiClass);
         console->setObjectName(QStringLiteral("console"));
-        console->setGeometry(QRect(690, 10, 411, 501));
+        console->setGeometry(QRect(720, 10, 431, 491));
         resetButton = new QPushButton(sentryguiClass);
         resetButton->setObjectName(QStringLiteral("resetButton"));
-        resetButton->setGeometry(QRect(1110, 100, 111, 34));
+        resetButton->setGeometry(QRect(1170, 70, 131, 34));
         calibrateButton = new QPushButton(sentryguiClass);
         calibrateButton->setObjectName(QStringLiteral("calibrateButton"));
-        calibrateButton->setGeometry(QRect(1110, 150, 112, 34));
+        calibrateButton->setGeometry(QRect(1170, 120, 131, 34));
         stopButton = new QPushButton(sentryguiClass);
         stopButton->setObjectName(QStringLiteral("stopButton"));
-        stopButton->setGeometry(QRect(1110, 200, 112, 34));
+        stopButton->setGeometry(QRect(1170, 170, 131, 34));
         layoutWidget2 = new QWidget(sentryguiClass);
         layoutWidget2->setObjectName(QStringLiteral("layoutWidget2"));
-        layoutWidget2->setGeometry(QRect(1110, 250, 111, 191));
+        layoutWidget2->setGeometry(QRect(1170, 220, 131, 230));
         verticalLayout = new QVBoxLayout(layoutWidget2);
         verticalLayout->setSpacing(6);
         verticalLayout->setContentsMargins(11, 11, 11, 11);

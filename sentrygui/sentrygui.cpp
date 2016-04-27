@@ -125,6 +125,7 @@ void sentrygui::printConsole(QString text)
 void sentrygui::updateCamStatus(QString text)
 {
 	ui.statusDisplay->setText(text);
+	ui.statusDisplay->setCursorPosition(0);
 }
 
 //SLOT: once target initialized, emit signal to calibrate
@@ -175,13 +176,17 @@ void sentrygui::updateMode(bool mode)
 	{
 		ui.stopButton->setText(QString("STOP"));
 		ui.modeDisplay->setText("AUTO");
+		ui.modeDisplay->setCursorPosition(0);
 		ui.statusDisplay->setText("Scanning");
+		ui.statusDisplay->setCursorPosition(0);
 	}
 	else
 	{
 		ui.stopButton->setText(QString("START"));
 		ui.statusDisplay->setText("Stopped");
+		ui.statusDisplay->setCursorPosition(0);
 		ui.modeDisplay->setText("IDLE");
+		ui.modeDisplay->setCursorPosition(0);
 	}
 }
 
@@ -204,13 +209,13 @@ void sentrygui::feedbackHandler(QAbstractButton* qb)
 		emit shotFeedback(-2);
 	}
 	//handle Low clicked
-	if (!txt.compare(QString("LOW"), Qt::CaseSensitive))
+	if (!txt.compare(QString("TOO LOW"), Qt::CaseSensitive))
 	{
 		//send -1 to recog shotFeedback
 		emit shotFeedback(-1);
 	}
 	//handle High clicked
-	if (!txt.compare(QString("HIGH"), Qt::CaseSensitive))
+	if (!txt.compare(QString("TOO HIGH"), Qt::CaseSensitive))
 	{
 		//send 1 to recog shotFeedback
 		emit shotFeedback(1);
@@ -232,11 +237,16 @@ void sentrygui::updateTurret(double tilt, double pan, bool linked)
 	
 	//update Pitch display with tilt
 	ui.camVDisplay->setText(tiltString);
+	ui.camVDisplay->setCursorPosition(0);
 	//update camera with pan
 	ui.camHDisplay->setText(panString);
+	ui.camHDisplay->setCursorPosition(0);
 	//if linked, then update turret with pan
 	if (linked)
+	{
 		ui.turretHDisplay->setText(panString);
+		ui.turretHDisplay->setCursorPosition(0);
+	}
 }
 
 //SLOT: update range when valid
@@ -251,4 +261,5 @@ void sentrygui::updateRange(unsigned int r, int valid)
 	//no range to report
 	else
 		ui.rangeDisplay->setText(QString("-"));
+	ui.rangeDisplay->setCursorPosition(0);
 }
