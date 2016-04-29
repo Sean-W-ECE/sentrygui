@@ -307,13 +307,13 @@ compData compensator::adjust(unsigned int Tilt, double tiltIncr, unsigned int Ra
 		{
 			//move 5 inches up/down on target
 			//compute angle difference
-			newAngle = atan2(58.778, (double)Range) * 180.0 / PI;
+			newAngle = atan2(30.0, (double)Range) * 180.0 / PI;
 		}
 		else if (abs(dir) == 1)
 		{
 			//move 2.5 inches up/down on target
 			//compute angle difference
-			newAngle = atan2((58.778 / 2), (double)Range) * 180.0 / PI;
+			newAngle = atan2((15.0), (double)Range) * 180.0 / PI;
 		}
 		else
 		{
